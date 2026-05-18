@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(gcloud config *)",
+      "Bash(gcloud projects *)",
+      "Bash(gcloud storage buckets list *)",
+      "Bash(gcloud storage ls *)",
+      "Bash(dir C:UsersAfkunGTDocumentsHACKATON *)",
+      "Bash(gcloud storage *)"
+    ]
+  }
+}

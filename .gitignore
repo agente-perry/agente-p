@@ -1,0 +1,66 @@
+# ── Entorno y secretos ─────────────────────────────────────────────────────
+.env
+.env.local
+.env.*.local
+!.env.example
+!.env.local.example
+
+# ── Python ─────────────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+ingest/.venv/
+.venv/
+venv/
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# ── Checkpoints de ingest ──────────────────────────────────────────────────
+ingest/.checkpoints/
+
+# ── Data local (no subir a git) ────────────────────────────────────────────
+data/
+*.jsonl
+*.json.gz
+*.csv
+*.parquet
+
+# ── Google Cloud ───────────────────────────────────────────────────────────
+application_default_credentials.json
+gcloud/
+
+# ── Next.js / Node ─────────────────────────────────────────────────────────
+frontend-perry/node_modules/
+frontend-perry/.next/
+frontend-perry/out/
+frontend-perry/build/
+frontend-perry/.vercel/
+frontend-perry/*.tsbuildinfo
+frontend-perry/next-env.d.ts
+node_modules/
+
+# ── Logs ───────────────────────────────────────────────────────────────────
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# ── OS ─────────────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+
+# ── IDE ────────────────────────────────────────────────────────────────────
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# ── Certificados y claves ──────────────────────────────────────────────────
+*.pem
+*.key
+*.p12

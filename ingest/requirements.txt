@@ -1,0 +1,4 @@
+neo4j==5.28.0
+google-cloud-storage==2.18.2
+python-dotenv==1.0.1
+tqdm==4.67.1
