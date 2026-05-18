@@ -1,0 +1,21 @@
+version: 1
+purpose: public-doctrine-corpus
+policy: >
+  Source PDFs in this folder are committed because they are public doctrine used
+  as criteria for evidence-backed TDR audit. Derived artifacts such as chunks,
+  embeddings, vectors, JSONL files, OCR outputs, and indexes are not committed.
+
+documents:
+  - id: oecd-795de142-en
+    file: 795de142-en.pdf
+    source_family: OECD
+    source_type: public_doctrine_pdf
+    use: doctrine_retrieval
+    notes: Public international guidance PDF used for procurement / governance criteria.
+
+  - id: ocp-2024-red-flag-procurement
+    file: OCP2024-RedFlagProcurement-1.pdf
+    source_family: OCP
+    source_type: public_doctrine_pdf
+    use: doctrine_retrieval
+    notes: Open Contracting Partnership red flag procurement doctrine.

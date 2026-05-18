@@ -1,0 +1,19 @@
+{
+  "name": "@contralatam/amplifier",
+  "version": "0.1.0",
+  "description": "Civic Amplifier Engine — LLM prompts + legal filter + distribution templates",
+  "type": "module",
+  "main": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./prompts/*": "./src/prompts/*.ts",
+    "./templates/*": "./src/templates/*.ts",
+    "./legal-filter": "./src/legal_filter.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "typescript": "^5.6.0"
+  }
+}

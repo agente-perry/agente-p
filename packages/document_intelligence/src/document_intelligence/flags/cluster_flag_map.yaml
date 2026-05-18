@@ -1,0 +1,26 @@
+# Mapping: which canonical clusters are worth inspecting for each flag code.
+# Used by PlannerAgent after consulting the doctrine. Adding a flag here without
+# also providing query templates in planner_queries.yaml is a noop.
+
+LOW_TRACEABILITY_OUTPUT:
+  - Entregables
+  - Forma de pago
+OBSOLETE_PHYSICAL_FORMAT:
+  - Entregables
+SUBJECTIVE_EVALUATION_CRITERIA:
+  - Criterios de evaluación
+OVER_SPECIFIED_EXPERIENCE:
+  - Experiencia del postor
+SPECIFIC_EQUIPMENT_REQUIREMENT:
+  - Requisitos técnicos
+  - Equipamiento
+EXCESSIVE_CERTIFICATION_REQUIREMENT:
+  - Requisitos técnicos
+UNREALISTIC_DEADLINE:
+  - Plazos
+EXCESSIVE_DOCUMENT_REQUIREMENT:
+  - Anexos / formatos
+  - Requisitos técnicos
+AI_NO_AUDIT_TRAIL:
+  - Requisitos técnicos
+  - Entregables

@@ -1,0 +1,184 @@
+AI_NO_AUDIT_TRAIL:
+  doctrine_chunk_count: 78
+  doctrine_status: real
+  doctrine_sources:
+  - source_document: OECD Governing with Artificial Intelligence (2024)
+    source_url: https://www.oecd.org/governance/governing-with-artificial-intelligence/
+    page_number: 14
+    section_title: Acronyms and abbreviations
+    quote: "12 \n\nGOVERNING WITH ARTIFICIAL INTELLIGENCE © OECD 2025\n\nAcronyms\
+      \ and abbreviations \nAGI \nArtificial general intelligence \nAI \nArtificial\
+      \ intelligence \nAIA \nAlgorithmic impact assessment \nAIG \nAntici"
+  - source_document: OECD Governing with Artificial Intelligence (2024)
+    source_url: https://www.oecd.org/governance/governing-with-artificial-intelligence/
+    page_number: 22
+    section_title: Acronyms and abbreviations
+    quote: "20 \n\nGOVERNING WITH ARTIFICIAL INTELLIGENCE © OECD 2025\n\nDespite\
+      \ the hype, AI progress is limited \nData from the OECD.AI Policy Observatory\
+      \ demonstrates the boom in interest in AI in recent years. Fo"
+  - source_document: OECD Governing with Artificial Intelligence (2024)
+    source_url: https://www.oecd.org/governance/governing-with-artificial-intelligence/
+    page_number: 36
+    section_title: Acronyms and abbreviations
+    quote: "34 \n\nGOVERNING WITH ARTIFICIAL INTELLIGENCE © OECD 2025\n\nAs they\
+      \ seek to develop and use AI, governments face risks that include potential\
+      \ dangers and threats that \ncould cause serious problems for i"
+EXCESSIVE_DOCUMENT_REQUIREMENT:
+  doctrine_chunk_count: 7
+  doctrine_status: real
+  doctrine_sources:
+  - source_document: OCP Red Flags in Public Procurement (2024)
+    source_url: https://www.open-contracting.org/resources/red-flags-in-public-procurement/
+    page_number: 4
+    section_title: 'Lead authors: Camila Salazar'
+    quote: "4\nWhat are red flags?\nOne in every three government dollars \nis spent\
+      \ on public procurement, around \nUS$13 trillion annually or 12% of global \n\
+      GDP (Spend Network & Open Contracting \nPartnership, 2020,"
+  - source_document: OECD Governing with Artificial Intelligence (2024)
+    source_url: https://www.oecd.org/governance/governing-with-artificial-intelligence/
+    page_number: 68
+    section_title: Scope of analysis
+    quote: "66 \n\nGOVERNING WITH ARTIFICIAL INTELLIGENCE © OECD 2025\n\nThese results\
+      \ are generally in line with findings from the EU (2025[10]) and LAC (2025[11])\
+      \ databases. \nAlthough there is not a uniform method"
+  - source_document: OECD Governing with Artificial Intelligence (2024)
+    source_url: https://www.oecd.org/governance/governing-with-artificial-intelligence/
+    page_number: 175
+    section_title: Effects and Critical Challenges, https://www.policycenter.ma/publications/ai-and-future-
+    quote: " 173\n\nGOVERNING WITH ARTIFICIAL INTELLIGENCE © OECD 2025\n\nManaging\
+      \ risks and challenges \nWhilst all deployments of AI in public administrations\
+      \ are generally accompanied by challenges, tax \nadministr"
+LOW_TRACEABILITY_OUTPUT:
+  doctrine_chunk_count: 28
+  doctrine_status: real
+  doctrine_sources:
+  - source_document: OCP Red Flags in Public Procurement (2024)
+    source_url: https://www.open-contracting.org/resources/red-flags-in-public-procurement/
+    page_number: 15
+    section_title: Dates across the
+    quote: "15\nFig 1. Example from a Red Flags BI tool in the Dominican Republic\
+      \ showing a rank of \nprocedures based on the number of collusion red flags\
+      \ detected.\nIn addition, you could calculate descriptive \nst"
+  - source_document: OCP Red Flags in Public Procurement (2024)
+    source_url: https://www.open-contracting.org/resources/red-flags-in-public-procurement/
+    page_number: 100
+    section_title: About Open Contracting Partnership
+    quote: "About Open Contracting Partnership\nThe Open Contracting Partnership (OCP)\
+      \ is an independent nonprofit \nworking in over 50 countries. OCP is a silo-busting\
+      \ collaboration \nacross governments, businesses"
+  - source_document: OECD Governing with Artificial Intelligence (2024)
+    source_url: https://www.oecd.org/governance/governing-with-artificial-intelligence/
+    page_number: 19
+    section_title: Acronyms and abbreviations
+    quote: " 17\n\nGOVERNING WITH ARTIFICIAL INTELLIGENCE © OECD 2025\n\nThe digital\
+      \ government journey \nDigital government is essential to transforming processes\
+      \ and services in ways that improve the public \nsector"
+OBSOLETE_PHYSICAL_FORMAT:
+  doctrine_chunk_count: 2
+  doctrine_status: real
+  doctrine_sources:
+  - source_document: OECD Governing with Artificial Intelligence (2024)
+    source_url: https://www.oecd.org/governance/governing-with-artificial-intelligence/
+    page_number: 241
+    section_title: Evidence of impact
+    quote: "Box 5.42. AI solutions in planning processes \nVienna’s digital building\
+      \ permit reviews (Austria) \nThe Building Regulations Information for Submission\
+      \ Envolvement (BRISE-Vienna) in Austria \nintroduces "
+  - source_document: OECD Governing with Artificial Intelligence (2024)
+    source_url: https://www.oecd.org/governance/governing-with-artificial-intelligence/
+    page_number: 275
+    section_title: Evidence of impact
+    quote: " 273\n\nGOVERNING WITH ARTIFICIAL INTELLIGENCE © OECD 2025\n\noversight\
+      \ of defence quality by enabling automated analysis of legal documents, improving\
+      \ consistency \nchecks and identifying potential issue"
+OVER_SPECIFIED_EXPERIENCE:
+  doctrine_chunk_count: 4
+  doctrine_status: real
+  doctrine_sources:
+  - source_document: OCP Red Flags in Public Procurement (2024)
+    source_url: https://www.open-contracting.org/resources/red-flags-in-public-procurement/
+    page_number: 20
+    section_title: Red Flags BI tool in the
+    quote: '20
+
+      Collusion risk red flags
+
+      R017 - Unreasonably low or high line item
+
+      R022 - Wide disparity in bid prices
+
+      R023 - Fixed-multiple bid prices
+
+      R024 - Price close to winning bid
+
+      R025 - Excessive unsuccessf'
+  - source_document: OCP Red Flags in Public Procurement (2024)
+    source_url: https://www.open-contracting.org/resources/red-flags-in-public-procurement/
+    page_number: 29
+    section_title: Unit of analysis
+    quote: "29\nDefinition\nWhy is this a red flag?\nRequired data fields\nUnit of\
+      \ analysis\nType of red flag\nBid-rigging\nAward\nTender\nPlanning\nContract\
+      \ \nImplementation\nStage\nContracting \nProcess\nSource\nBased on OECD’"
+  - source_document: OCP Red Flags in Public Procurement (2024)
+    source_url: https://www.open-contracting.org/resources/red-flags-in-public-procurement/
+    page_number: 30
+    section_title: Unit of analysis
+    quote: "30\nDefinition\nWhy is this a red flag?\nUnit of analysis\nType of red\
+      \ flag\nBid-rigging\nAward\nTender\nPlanning\nContract \nImplementation\nStage\n\
+      Contracting \nProcess\nSource\nBased on OECD’s Principles for Inte"
+SPECIFIC_EQUIPMENT_REQUIREMENT:
+  doctrine_chunk_count: 3
+  doctrine_status: real
+  doctrine_sources:
+  - source_document: OCP Red Flags in Public Procurement (2024)
+    source_url: https://www.open-contracting.org/resources/red-flags-in-public-procurement/
+    page_number: 30
+    section_title: Unit of analysis
+    quote: "30\nDefinition\nWhy is this a red flag?\nUnit of analysis\nType of red\
+      \ flag\nBid-rigging\nAward\nTender\nPlanning\nContract \nImplementation\nStage\n\
+      Contracting \nProcess\nSource\nBased on OECD’s Principles for Inte"
+  - source_document: OCP Red Flags in Public Procurement (2024)
+    source_url: https://www.open-contracting.org/resources/red-flags-in-public-procurement/
+    page_number: 34
+    section_title: Unit of analysis
+    quote: "34\nSplitting purchases to avoid \nprocurement thresholds\nDefinition\n\
+      Why is this a red flag\nRequired data fields\nMethodology\nUnit of analysis\n\
+      Type of red flag\nBid-rigging\nWhat should have been a single "
+  - source_document: OCP Red Flags in Public Procurement (2024)
+    source_url: https://www.open-contracting.org/resources/red-flags-in-public-procurement/
+    page_number: 35
+    section_title: Unit of analysis
+    quote: "35\nDefinition\nWhy is this a red flag?\nRequired data fields\nUnit of\
+      \ analysis\nType of red flag\nBid-rigging\nAward\nTender\nPlanning\nContract\
+      \ \nImplementation\nStage\nContracting \nProcess\nSource\nBased on “Unju"
+SUBJECTIVE_EVALUATION_CRITERIA:
+  doctrine_chunk_count: 14
+  doctrine_status: real
+  doctrine_sources:
+  - source_document: OCP Red Flags in Public Procurement (2024)
+    source_url: https://www.open-contracting.org/resources/red-flags-in-public-procurement/
+    page_number: 6
+    section_title: In Kazakhstan, the private
+    quote: "✓The OCDS provides a flexible, extendible \nschema for unifying documents\
+      \ and records \nacross the entire procurement system. This \nallows for disparate\
+      \ data fields or data mod­\nels to be translated, or"
+  - source_document: OCP Red Flags in Public Procurement (2024)
+    source_url: https://www.open-contracting.org/resources/red-flags-in-public-procurement/
+    page_number: 21
+    section_title: Red Flags BI tool in the
+    quote: '21
+
+      R016 - Tender value is higher or lower than average for this item category
+
+      R020 - Tender has a complaint
+
+      R021 - High use of discretionary evaluation criteria
+
+      R029 - Bid prices deviate from Benford’'
+  - source_document: OCP Red Flags in Public Procurement (2024)
+    source_url: https://www.open-contracting.org/resources/red-flags-in-public-procurement/
+    page_number: 25
+    section_title: Unit of analysis
+    quote: "25\nDefinition\nWhy is this a red flag?\nUnit of analysis\nType of red\
+      \ flag\nBid-rigging\nAward\nTender\nPlanning\nContract \nImplementation\nStage\n\
+      Required data fields\nMethodology\nManipulation of procurement \nt"

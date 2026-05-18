@@ -1,0 +1,97 @@
+# Query Expansion Catalog — PR #8
+#
+# Maps general intent phrases → flag codes that should be expanded.
+# Maps each flag code → specific retrieval queries to run.
+#
+# Used by PlannerAgent when enable_intent_expansion=True to expand a
+# generic user question into targeted flag searches.
+#
+# Format:
+#   intent_name:
+#     trigger_phrases: [substrings that activate this intent]
+#     expands_to: [flag codes to search]
+#
+#   flag_code:
+#     retrieval_queries: [specific search strings for retriever]
+
+risk_scan:
+  trigger_phrases:
+    - riesgo
+    - senales
+    - señales
+    - restrictivos
+    - baja trazabilidad
+    - revisar
+    - sospechoso
+    - atipico
+    - irregularidad
+    - patron
+    - documentos obligatorios
+    - documentacion exigida
+  expands_to:
+    - EXCESSIVE_DOCUMENT_REQUIREMENT
+    - SUBJECTIVE_EVALUATION_CRITERIA
+    - SPECIFIC_EQUIPMENT_REQUIREMENT
+    - EXCESSIVE_CERTIFICATION_REQUIREMENT
+    - LOW_TRACEABILITY_OUTPUT
+    - OBSOLETE_PHYSICAL_FORMAT
+    - UNREALISTIC_DEADLINE
+    - OVER_SPECIFIED_EXPERIENCE
+
+EXCESSIVE_DOCUMENT_REQUIREMENT:
+  retrieval_queries:
+    - copia legalizada notarial fedateado
+    - foliado visado original y copia
+    - tres juegos originales sobre cerrado
+    - entrega fisica obligatoria de documentos
+    - presentar los siguientes documentos copias anexos
+    - no menor a documentos paginas
+    - documentos fisicos adicionales exigidos
+
+SUBJECTIVE_EVALUATION_CRITERIA:
+  retrieval_queries:
+    - a juicio del comite a criterio del comite
+    - a satisfaccion de la entidad afinidad institucional
+    - criterios subjetivos calidad general rigor tecnico
+    - evaluacion discrecional sin rubrica medible
+
+SPECIFIC_EQUIPMENT_REQUIREMENT:
+  retrieval_queries:
+    - marca unica modelo especifico proveedor propietario
+    - caracteristicas exclusivas sin equivalente
+    - marca referencial modelo exacto
+
+EXCESSIVE_CERTIFICATION_REQUIREMENT:
+  retrieval_queries:
+    - certificacion ISO obligatoria acreditacion vigente
+    - homologacion certificacion no relacionada
+    - certificaciones desproporcionadas para el contrato
+
+LOW_TRACEABILITY_OUTPUT:
+  retrieval_queries:
+    - entregable digital dataset csv base de datos estructurada
+    - informe formato electronico trazabilidad
+    - sin base de datos sin archivo editable
+    - entregable no estructurado
+
+OBSOLETE_PHYSICAL_FORMAT:
+  retrieval_queries:
+    - informe impreso formato fisico ejemplar original A3
+    - entrega fisica papel sin medio digital
+    - exclusivamente fisico medio fisico
+
+UNREALISTIC_DEADLINE:
+  retrieval_queries:
+    - plazo de presentacion en dias calendario corto
+    - cronograma ajustado urgente reducido
+
+OVER_SPECIFIED_EXPERIENCE:
+  retrieval_queries:
+    - experiencia minima de anios monto acumulado
+    - contratos del mismo sector experiencia especifica
+    - experiencia previa restrictiva proveedor unico
+
+AI_NO_AUDIT_TRAIL:
+  retrieval_queries:
+    - inteligencia artificial sin auditoria gobernanza
+    - modelo automatizado sin trazabilidad ni revision humana

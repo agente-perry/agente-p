@@ -1,0 +1,25 @@
+# sources.yaml — AgentePerry TDR Scanner
+# Runtime source config. Keep this MVP-focused.
+
+defaults:
+  user_agent: "AgentePerry-TDR-Scanner/0.1"
+  timeout_seconds: 300
+  retry:
+    max_attempts: 3
+    base_delay_seconds: 2
+    max_delay_seconds: 30
+
+sources:
+  manual_tdr:
+    enabled: true
+    priority: P0
+    method: csv_manifest
+    manifest_path: "data/manual_tdrs/metadata.csv"
+    raw_storage_path: "storage/raw/tdr"
+    processed_storage_path: "storage/processed/tdr"
+
+  seace_oece_tdr:
+    enabled: false
+    priority: P1
+    method: deferred_download
+    note: "Enable only after SPEC-0001 and SPEC-0002 have real verified data."

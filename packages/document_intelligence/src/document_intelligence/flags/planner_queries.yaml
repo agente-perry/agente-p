@@ -1,0 +1,60 @@
+# Per-flag retrieval query templates.
+#
+# Each query is one search string the RetrieverAgent will run against the
+# hybrid (FAISS + BM25) index. Queries should:
+#  - use tokens that appear literally in real Peruvian procurement text
+#  - align with the regex patterns in agents/risk_analysis.py so that retrieved
+#    hits actually trigger downstream pattern matching
+#  - stay short (BM25 favours rare tokens)
+#
+# Multiple queries per flag are intentional: each surfaces a different
+# linguistic angle of the same risk class.
+
+LOW_TRACEABILITY_OUTPUT:
+  - "entregable digital dataset csv base de datos estructurada"
+  - "informe formato electronico trazabilidad"
+  - "sin base de datos sin archivo editable"
+  - "entregable no estructurado"
+
+OBSOLETE_PHYSICAL_FORMAT:
+  - "informe impreso formato fisico ejemplar original A3"
+  - "entrega fisica papel sin medio digital"
+  - "exclusivamente fisico medio fisico"
+
+SUBJECTIVE_EVALUATION_CRITERIA:
+  - "a juicio del comite a criterio del comite"
+  - "a satisfaccion de la entidad afinidad institucional"
+  - "criterios subjetivos calidad general rigor tecnico"
+  - "evaluacion discrecional sin rubrica medible"
+
+OVER_SPECIFIED_EXPERIENCE:
+  - "experiencia minima de anios monto acumulado"
+  - "contratos del mismo sector experiencia especifica"
+  - "experiencia previa restrictiva proveedor unico"
+
+SPECIFIC_EQUIPMENT_REQUIREMENT:
+  - "marca unica modelo especifico proveedor propietario"
+  - "caracteristicas exclusivas sin equivalente"
+  - "marca referencial modelo exacto"
+
+EXCESSIVE_CERTIFICATION_REQUIREMENT:
+  - "certificacion ISO obligatoria acreditacion vigente"
+  - "homologacion certificacion no relacionada"
+  - "certificaciones desproporcionadas para el contrato"
+
+UNREALISTIC_DEADLINE:
+  - "plazo de presentacion en dias calendario corto"
+  - "cronograma ajustado urgente reducido"
+
+EXCESSIVE_DOCUMENT_REQUIREMENT:
+  - "copia legalizada notarial fedateado"
+  - "foliado visado original y copia"
+  - "tres juegos originales sobre cerrado"
+  - "entrega fisica obligatoria de documentos"
+  - "presentar los siguientes documentos copias anexos"
+  - "no menor a documentos paginas"
+  - "documentos fisicos adicionales exigidos"
+
+AI_NO_AUDIT_TRAIL:
+  - "inteligencia artificial sin auditoria gobernanza"
+  - "modelo automatizado sin trazabilidad ni revision humana"
