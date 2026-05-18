@@ -24,10 +24,28 @@ ingest/.checkpoints/
 
 # ── Data local (no subir a git) ────────────────────────────────────────────
 data/
+!data/
+!data/PDF-Base/
+!data/PDF-Base/README.md
+!data/PDF-Base/manifest.yaml
+!data/PDF-Base/*.pdf
+data/PDF-Base/*:Zone.Identifier
 *.jsonl
+!packages/document_intelligence/tests/fixtures/*.jsonl
 *.json.gz
 *.csv
 *.parquet
+*.npy
+*.zip
+*.rar
+*.7z
+*.sqlite
+*.db
+
+# TDR/case PDFs must stay out of git. The only allowed PDFs are public
+# doctrine PDFs in data/PDF-Base, whitelisted above.
+*.pdf
+!data/PDF-Base/*.pdf
 
 # ── Google Cloud ───────────────────────────────────────────────────────────
 application_default_credentials.json

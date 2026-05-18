@@ -1,153 +1,211 @@
-# AGENTE P.E.R.R.Y
+# Agente Perry
 
-**Procurement Evidence & Risk Recognition sYstem**
+**Multi-agent system that surfaces risk signals in Peruvian public procurement
+using only publicly available evidence.**
 
-Knowledge Graph anticorrupción para la detección automatizada de patrones inusuales en contrataciones públicas del Perú. Cruza datos de SEACE (OCDS), SUNAT e-consultaruc y TDRs para identificar 19 señales de alerta.
+Agente Perry analyzes Terms of Reference (TDR) and procurement documents at
+scale, anchoring every signal to a verifiable source fragment. It is built
+for journalists, civic-tech teams and academic researchers working on
+procurement integrity.
 
----
-
-## Estructura del repositorio
-
-```
-agente-p/
-├── analysis/               # Fase 1 — inventario de data
-│   ├── agent_reports/      # Reports por fuente (A1-A4)
-│   └── data_inventory.md   # Inventario consolidado + mapa de joins
-├── ontology/               # Fase 2 — ontología Neo4j
-│   ├── schema.md           # Spec completa + Mermaid + decisiones de diseño
-│   ├── schema.cypher       # Constraints + índices (DDL)
-│   ├── flags.cypher        # 19 queries de detección de red flags
-│   └── metrics.cypher      # Métricas derivadas (M1-M6)
-├── ingest/                 # Pipeline GCS → Neo4j AuraDB
-│   ├── main.py             # Entry point (schema|ocds|sunat|dossiers|seace|derived|all|verify)
-│   ├── load_ocds.py        # 72,399 OCDS records → Company, PublicEntity, Contract, Tender
-│   ├── load_sunat.py       # SUNAT e-consultaruc → enrich Company + Person + Address
-│   ├── load_dossiers.py    # scraped/results/ → Dossier + RiskFlag
-│   ├── load_seace.py       # downloads/2024-2025/ → ProcedureSeace
-│   ├── run_derived.py      # SAME_ADDRESS_AS, SAME_REPR_AS, risk_score_v2
-│   ├── neo4j_utils.py      # Driver con retry + batch runner
-│   ├── gcs_utils.py        # GCS streaming + listing
-│   ├── checkpoint.py       # Checkpoints para reinicio de ingest
-│   ├── config.py           # Variables de entorno
-│   └── requirements.txt
-├── frontend-perry/         # Next.js — dashboard de señales de alerta
-│   └── app/page.tsx
-├── .env.example            # Plantilla de variables de entorno
-└── Info.md                 # Descripción de fuentes de data (referencia)
-```
+> We do not accuse. We surface signals with traceable public evidence.
+> Every output is investigative input, not a verdict.
 
 ---
 
-## Setup rápido
+## Why this exists
 
-### 1. Variables de entorno
+Public procurement in Peru moves billions of soles per year through tens of
+thousands of documents. Most red flags are buried in legalese, scanned PDFs
+and disconnected portals. Manual review does not scale.
 
-```bash
-cp .env.example .env
-# Edita .env con las credenciales de Neo4j AuraDB
-```
-
-### 2. Instalar dependencias Python
-
-```bash
-cd ingest
-python -m venv .venv
-.venv\Scripts\activate      # Windows
-pip install -r requirements.txt
-```
-
-### 3. Autenticar GCS
-
-```bash
-gcloud auth application-default login
-gcloud config set project agente-perry
-```
-
-### 4. Correr el ingest
-
-```bash
-cd ingest
-python main.py schema      # Aplica constraints + índices en Neo4j
-python main.py ocds        # Carga 72k contratos OCDS (~10 min)
-python main.py sunat       # Enriquece empresas con SUNAT e-consultaruc
-python main.py dossiers    # Carga Dossiers y RiskFlags de TDRs
-python main.py seace       # Carga procedimientos MINAM de downloads/
-python main.py derived     # Calcula SAME_ADDRESS_AS, SAME_REPR_AS, métricas
-python main.py verify      # Imprime conteos de nodos y relaciones
-```
-
-O todo en un paso:
-
-```bash
-python main.py all
-```
-
-El ingest es **resumable**: si se interrumpe, vuelve a correr el mismo comando. Los checkpoints están en `ingest/.checkpoints/`.
+Agente Perry is a coordinated system of specialized agents that reads,
+parses, indexes, cross-references and scores these documents, returning a
+**dossier** with quoted evidence and page citations.
 
 ---
 
-## Grafo — nodos y relaciones
+## Architecture overview
 
-| Nodo | Records | Fuente |
-|------|---------|--------|
-| Company | ~30,578 | OCDS + SUNAT |
-| PublicEntity | ~2,731 | OCDS |
-| Contract | ~55,457 | OCDS |
-| Tender | ~16,942 | OCDS |
-| Address | variable | SUNAT domicilio_fiscal |
-| Person | variable | SUNAT representantes_legales |
-| Dossier | 3+ | scraped/results/ |
-| RiskFlag | 12+ | scraped/results/flags.json |
-| ProcedureSeace | 37 | downloads/ |
+```mermaid
+flowchart TB
+    subgraph Sources[" 📚 Public Sources "]
+        direction LR
+        S1[Procurement portals]
+        S2[Open contracting data]
+        S3[Public registries]
+        S4[Legal doctrine corpus]
+    end
 
-| Relación | Descripción |
-|----------|-------------|
-| WON | Empresa → Contrato |
-| AWARDED_BY | Contrato → EntidadPública |
-| UNDER_TENDER | Contrato → Licitación |
-| LOCATED_AT | Empresa → Dirección |
-| SAME_ADDRESS_AS | Empresa ↔ Empresa (domicilio compartido) |
-| REPRESENTS | Persona → Empresa |
-| SAME_REPR_AS | Empresa ↔ Empresa (representante legal compartido) |
-| ANALYZED_BY | Contrato → Dossier |
-| HAS_FLAG | Dossier → RiskFlag |
+    subgraph Ingestion[" 🔍 Ingestion layer "]
+        direction TB
+        I1[Discovery agent]
+        I2[PDF parser + OCR fallback]
+        I3[Page cleaner + chunker]
+    end
 
----
+    subgraph Knowledge[" 🧠 Knowledge layer "]
+        direction TB
+        K1[Vector index<br/>pgvector]
+        K2[Entity graph<br/>Neo4j]
+        K3[Doctrine index]
+    end
 
-## Red flags detectables
+    subgraph Agents[" ⚖️ Analysis agents "]
+        direction TB
+        A1[Planner]
+        A2[Evidence critic]
+        A3[Risk scoring]
+        A4[Orchestrator]
+    end
 
-Los 19 flags están en `ontology/flags.cypher`. Ejemplos:
+    subgraph Output[" 📋 Output "]
+        direction TB
+        O1[Dossier API]
+        O2[Web UI]
+    end
 
-- **F1** — Empresa fantasma: estado BAJA o condición NO HABIDO ganando contratos activos
-- **F2** — Domicilio compartido: ≥3 empresas en la misma dirección no genérica
-- **F3** — Sin trabajadores: empresa con 0-2 trabajadores y >S/100k en contratos
-- **F4** — Empresa reciente: primer contrato <365 días tras inicio de actividades
-- **F5** — Deuda coactiva activa mientras gana contratos del Estado
-- **F9** — Concentración extrema: proveedor con >80% del gasto de una entidad en un año
-- **F11** — Red de representante: mismo represente en ≥3 empresas que compiten
-- **F14** — Velocidad anormal: ≥3 contratos de la misma entidad en 90 días
+    Sources --> Ingestion
+    Ingestion --> Knowledge
+    Knowledge --> Agents
+    A1 --> A2 --> A3 --> A4
+    A4 --> Output
 
-Ver `ontology/flags.cypher` para todos los flags con Cypher ejecutable.
-
----
-
-## Frontend
-
-```bash
-cd frontend-perry
-npm install
-npm run dev     # http://localhost:3000
+    style Sources fill:#0f172a,stroke:#3b82f6,color:#e2e8f0
+    style Ingestion fill:#0f172a,stroke:#8b5cf6,color:#e2e8f0
+    style Knowledge fill:#0f172a,stroke:#10b981,color:#e2e8f0
+    style Agents fill:#0f172a,stroke:#ef4444,color:#e2e8f0
+    style Output fill:#0f172a,stroke:#f59e0b,color:#e2e8f0
 ```
 
-Dashboard estático (mockup) con las señales detectadas, estadísticas del grafo y previsualización del agente conversacional.
+### Agent roster
+
+| Agent | Role |
+|-------|------|
+| **Discovery** | Locates and downloads public procurement documents |
+| **PDF parser** | Extracts text with OCR fallback for scanned documents |
+| **Chunker** | Page-aligned chunks with source provenance |
+| **Doctrine retriever** | Surfaces relevant legal precedents per clause |
+| **Planner** | Decides which checks to run on a given document |
+| **Evidence critic** | Validates that each flag is supported by quoted text |
+| **Risk scoring** | Aggregates flags into a calibrated dossier score |
+| **Graph enricher** | Adds entity-context signals from the procurement graph |
+| **Orchestrator** | Coordinates the full audit run end-to-end |
 
 ---
 
-## Fuentes de datos
+## Tech stack
 
-- **SEACE / OCDS Perú**: 72,399 contratos 2024-2026 en `gs://agente-perry-data-prod/scraped/ocds/`
-- **SUNAT e-consultaruc**: datos ricos de empresas (representantes, trabajadores, CIIU, deuda coactiva)
-- **TDRs / Dossiers**: análisis de riesgo de PDFs de términos de referencia en `scraped/results/`
-- **Downloads MINAM**: 37 procedimientos SEACE en ejecución en `downloads/2024/` y `downloads/2025/`
+| Layer | Technology |
+|-------|------------|
+| Web UI | Next.js 15 (App Router) |
+| API | FastAPI (Python 3.11+) |
+| Document intelligence | Custom agent runtime + AI SDK provider routing |
+| Vector store | Supabase Postgres + pgvector |
+| Entity graph | Neo4j |
+| Object storage | Cloud object storage (provider-agnostic) |
+| Infra | Docker compose for local dev |
 
-Todos los datos son de **fuentes públicas**. Las señales de alerta son indicadores estadísticos — no conclusiones jurídicas.
+---
+
+## Repository layout
+
+```
+apps/
+  api/                       FastAPI orchestrator and dossier endpoints
+  scrapers/                  Ingestion CLI, parser, chunker, flag engine
+  web/                       Next.js 15 dossier UI
+packages/
+  document_intelligence/     Planner, evidence critic, risk scoring, doctrine
+  db/                        Postgres migrations and seed registry
+  shared/                    Cross-package types and utilities
+infra/
+  docker/                    Local dev compose
+  supabase/                  Supabase project config
+```
+
+---
+
+## Quick start
+
+```bash
+# 1. Backend API
+cd apps/api
+uv venv --python 3.11
+uv pip install -e ".[dev]"
+cp .env.example .env  # set credentials
+.venv/bin/uvicorn agenteperry_api.main:app --reload --port 8080
+
+# 2. Document intelligence + ingestion (optional, enables /audit)
+uv pip install -e ../../packages/document_intelligence
+uv pip install -e ../scrapers
+
+# 3. Web UI
+cd ../../apps/web
+pnpm install
+pnpm dev
+```
+
+Swagger UI: <http://localhost:8080/docs>
+
+---
+
+## Methodology
+
+The risk-signal taxonomy and the legal-safe vocabulary are documented in
+[`docs/METHODOLOGY.md`](docs/METHODOLOGY.md). The framework references the
+public **FUNES** methodology published by Ojo Publico.
+
+Every dossier ships with the disclaimer:
+
+> This analysis identifies risk signals in public documents. It is not an
+> accusation and does not determine responsibility. Requires human review
+> and cross-check with the official source.
+
+---
+
+## Anonymity policy
+
+This is an anti-corruption project. Several teams working on similar
+hackathons have chosen not to publicly associate their identities with the
+project — names are not shared on social media, repositories, or with
+sponsors. **Teams can compete and win every prize anonymously like any
+other team.**
+
+For this reason:
+
+- The repository does not list individual contributors.
+- Author metadata in package manifests uses a shared project pseudonym.
+- All inbound communication goes through a single shared mailbox.
+
+If you are a team, journalist or organization that wants to collaborate or
+needs to verify identities for legitimate purposes, write to the contact
+address below from your institutional email. We reply within 24–48 hours
+after verifying the requester.
+
+---
+
+## Contact
+
+📧 **hackaton942@gmail.com**
+
+Please include:
+
+- The institutional context of your request.
+- A verifiable institutional email or domain.
+- The specific dataset, dossier or finding you want to discuss.
+
+We do not engage through social media, public issues or direct messages.
+
+---
+
+## License
+
+MIT. See package-level `pyproject.toml` and `package.json` files.
+
+---
+
+## Status
+
+MVP. Active development. Internal benchmarks and golden-set evaluation are
+not published. Demos are available under NDA for verified institutions.
