@@ -3,7 +3,7 @@ name = "agenteperry-api"
 version = "0.1.0"
 description = "FastAPI backend orchestrating document_intelligence + Neo4j graph + GCS data lake"
 requires-python = ">=3.11"
-authors = [{ name = "NEO Consulting", email = "miguel.arias@neo.com.pe" }]
+authors = [{ name = "Agente Perry", email = "hackaton942@gmail.com" }]
 license = { text = "MIT" }
 
 dependencies = [

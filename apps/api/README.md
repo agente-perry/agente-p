@@ -1,54 +1,51 @@
-# AgentePerry API (FastAPI)
+# API (FastAPI)
 
-Backend que conecta tres capas:
+Backend orchestrator connecting three layers:
 
-- **GCS** — `gs://agente-perry-data-prod/` (data lake del compa).
-- **Neo4j AuraDB** — grafo poblado por `ingest/main.py` del repo `agente-p`.
-- **Document Intelligence** — motor calibrado (`packages/document_intelligence`) +
-  `AuditorGraph` (`apps/scrapers/.../tdr/auditor.py`) para corridas on-demand.
+- **Object storage** — public dossier artifacts.
+- **Neo4j** — entity graph.
+- **Document Intelligence** — calibrated analysis engine
+  (`packages/document_intelligence`) plus on-demand audit graph.
 
 ## Endpoints
 
 ```
-GET  /health                          → status + readiness flags
-GET  /demo/cases                      → catalogue hardcoded + live counts
-GET  /dossiers                        → lista OCIDs con dossier en GCS
-GET  /dossiers/{ocid}                 → dossier.json completo
-GET  /dossiers/{ocid}/flags           → flags.json
-GET  /dossiers/{ocid}/markdown        → dossier.md + gs:// uri
-GET  /graph/counts                    → totales por nodo/edge en Neo4j
-GET  /graph/company/{ruc}             → Company + métricas
-GET  /graph/flags?limit=20            → top flag_codes
-POST /audit/{ocid}                    → corre AuditorGraph sobre PDF de GCS
+GET  /health                          status + readiness flags
+GET  /demo/cases                      catalogue + live counts
+GET  /dossiers                        list dossier ids
+GET  /dossiers/{ocid}                 full dossier payload
+GET  /dossiers/{ocid}/flags           flags only
+GET  /dossiers/{ocid}/markdown        rendered markdown
+GET  /graph/counts                    graph node/edge totals
+GET  /graph/company/{ruc}             company node + metrics
+GET  /graph/flags?limit=20            top flag codes
+POST /audit/{ocid}                    run audit graph on a stored PDF
 ```
 
-Cuando `NEO4J_URI` está vacío → `/graph/*` retorna 503 (resto sigue OK).
-Cuando el stack `document_intelligence + langgraph + agenteperry` no está
-en el venv → `/audit/*` retorna 501 (resto sigue OK).
+When `NEO4J_URI` is empty the `/graph/*` routes return 503.
+When the analysis stack is not installed, `/audit/*` returns 501.
 
-## Setup local
+## Local setup
 
 ```bash
 cd apps/api
 uv venv --python 3.11
 uv pip install -e ".[dev]"
 
-# Para habilitar /audit, instalar también document_intelligence + agenteperry:
+# Enable /audit by installing the analysis stack:
 uv pip install -e ../../packages/document_intelligence
 uv pip install -e ../scrapers
 
-cp .env.example .env  # editar con credenciales reales
-gcloud auth application-default login
-gcloud config set project agente-perry
+cp .env.example .env  # set credentials
 ```
 
-## Correr
+## Run
 
 ```bash
 .venv/bin/uvicorn agenteperry_api.main:app --reload --port 8080
 ```
 
-Swagger UI: <http://localhost:8080/docs>.
+Swagger UI: <http://localhost:8080/docs>
 
 ## Tests
 
@@ -57,34 +54,15 @@ Swagger UI: <http://localhost:8080/docs>.
 .venv/bin/ruff check src tests
 ```
 
-Los tests usan `unittest.mock` para no tocar GCS/Neo4j reales.
-
-## Integración con el frontend
-
-El frontend Next.js (`https://github.com/agente-perry/agente-perry`) lee Neo4j
-**directo** vía `neo4j-driver`. Esta API añade endpoints que el frontend
-puede consumir para:
-
-- `/dossiers/{ocid}` y `/dossiers/{ocid}/markdown` — renderizar dossier ciudadano.
-- `/demo/cases` — landing con risk + score real desde GCS.
-- `/audit/{ocid}` — botón "Re-auditar con motor calibrado".
-
-Agregar `NEXT_PUBLIC_API_BASE_URL=http://localhost:8080` en `.env.local`
-del frontend. Las rutas existentes `/api/grafo`, `/api/alertas`, etc. siguen
-hablando a Neo4j directo (compañero); las nuevas usan esta API.
+Tests use `unittest.mock` so they do not hit cloud services.
 
 ## Deploy
 
-- **Cloud Run** (recomendado): `gcloud run deploy agenteperry-api --source . --region us-central1 --allow-unauthenticated`.
-- **Docker**: `docker build -t agenteperry-api . && docker run -p 8080:8080 --env-file .env agenteperry-api`.
+- Container build via the provided `Dockerfile`.
+- Configure `NEO4J_URI`, object storage bucket and credentials via environment variables.
 
-Credenciales GCS: usar Workload Identity en Cloud Run (no clave JSON).
-Credenciales Neo4j: variable de entorno encriptada.
+## Why FastAPI
 
-## Por qué FastAPI y no Express/Hono
-
-- Comparte modelos Pydantic con `document_intelligence` y `document_pack`.
-- Tipos JSON sincronizados con el motor sin duplicación.
-- `/audit/{ocid}` necesita import directo del orchestrator Python.
-- Swagger UI gratis.
-- Stack único (Python) reduce surface de errores en hackathon.
+- Shares Pydantic models with `document_intelligence`.
+- Direct Python imports for the audit orchestrator.
+- Automatic OpenAPI + Swagger UI.

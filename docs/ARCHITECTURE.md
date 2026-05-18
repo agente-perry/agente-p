@@ -1,48 +1,52 @@
-# Architecture — AgentePerry TDR Scanner
+# Architecture
 
-## MVP Boundary
+Multi-agent pipeline for analyzing Peruvian public procurement TDR documents
+and surfacing risk signals with traceable evidence.
 
-AgentePerry is a preventive scanner for public TDR documents. It does not build a full procurement graph in the MVP.
+## Pipeline
 
 ```text
-CSV metadata + local/public PDFs
-  -> Manual loader
-  -> PDF parser
-  -> Page text cleaning
-  -> Chunking
-  -> Embedding inputs / vector storage
-  -> Rule-based flags
-  -> Evidence-backed dossier API
+Public TDR sources
+    -> Discovery / ingestion agents
+    -> PDF parsing + OCR fallback
+    -> Page cleaning + chunking
+    -> Embedding + vector storage (pgvector)
+    -> Doctrine-anchored risk analysis agents
+    -> Entity graph enrichment (Neo4j)
+    -> Evidence-backed dossier API
+    -> Web dossier UI
 ```
 
-## Active Components
+## Components
 
 | Layer | Path | Purpose |
 |-------|------|---------|
-| CLI | `apps/scrapers/src/agenteperry/cli.py` | Run local TDR pipeline commands |
-| TDR core | `apps/scrapers/src/agenteperry/tdr/` | Ingestion, parsing, chunking, embeddings, flags, search |
-| DB | `packages/db/migrations/0002_tdr_core.sql` | Minimal TDR schema |
-| Data docs | `data/README.md` | Rules for local non-versioned data |
-| Specs | `specs/active/` | Current implementation sequence |
+| API | `apps/api/` | FastAPI orchestrator, dossier endpoints |
+| Scrapers | `apps/scrapers/` | Ingestion CLI, PDF parser, chunker, flag engine |
+| Web | `apps/web/` | Next.js 15 dossier UI |
+| Document intelligence | `packages/document_intelligence/` | Planner, evidence critic, risk-scoring agents, doctrine index |
+| DB | `packages/db/` | Postgres migrations, source registry, schema |
+| Shared | `packages/shared/` | Cross-package types |
+| Infra | `infra/` | Docker compose, Supabase config |
 
-## Deferred Components
+## Data flow
 
-The old platform vision is preserved in `docs/reference/` and deferred specs live in `specs/deferred/`.
+1. Ingestion: discovery agents pull public procurement documents and metadata.
+2. Parsing: PDF parser extracts text with OCR fallback for scanned pages.
+3. Chunking + embeddings: page-aligned chunks with pgvector storage for retrieval.
+4. Doctrine retrieval: legal-doctrine index supplies precedents to the analysis agents.
+5. Risk analysis: planner -> evidence critic -> risk-scoring agents produce flags with quote and page citation.
+6. Graph enrichment: entity graph adds context for conflict-of-interest signals.
+7. Dossier API: returns a structured, evidence-backed report for the web UI.
 
-Deferred until post-MVP:
+## Storage
 
-- ConflictMap full.
-- Entity graph and Graphiti.
-- Neo4j.
-- ONPE/JNE/SUNARP enrichment.
-- Civic Amplifier full.
-- SMS campaigns.
-- National map.
+- Supabase Postgres with pgvector for documents, pages, chunks, embeddings, and flags.
+- Neo4j for the entity graph.
+- Object storage for raw PDFs (out of repository).
 
-## Data Flow
+## Methodology
 
-1. `SPEC-0001`: CSV metadata validates required columns and upserts `tdr_documents`.
-2. `SPEC-0002`: PDF parser writes `tdr_pages` with clean page text.
-3. `SPEC-0003`: chunker writes `tdr_chunks`; embedding worker writes `tdr_embeddings`.
-4. `SPEC-0004`: flag engine writes `tdr_flags` with evidence quote and page number.
-5. `SPEC-0005`: API returns a dossier payload for the demo UI.
+Risk signal taxonomy and language conventions are documented in
+[`METHODOLOGY.md`](METHODOLOGY.md). The framework references the public FUNES
+methodology published by Ojo Publico.

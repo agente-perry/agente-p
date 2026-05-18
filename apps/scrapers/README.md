@@ -1,8 +1,6 @@
 # @agenteperry/scrapers
 
-Python package for the AgentePerry TDR Scanner MVP.
-
-This app is the main work area for the hackathon. It handles:
+Python package for TDR ingestion and risk-signal scanning. Handles:
 
 1. Manual TDR metadata ingestion.
 2. PDF parsing with PyMuPDF.

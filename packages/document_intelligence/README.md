@@ -1,8 +1,6 @@
 # document_intelligence
 
-Local-first agentic document intelligence core for TDR / public-procurement analysis.
-
-Status: PR #1 of SPEC-0007 — scaffolding + data layer only. Agents land in PRs #2–#4.
+Agentic document intelligence core for TDR and public-procurement analysis.
 
 ## Install (dev)
 
@@ -28,8 +26,10 @@ src/document_intelligence/
   schemas/        Pydantic v2 contracts shared across agents
   parsing/        PyMuPDF page extraction + text cleanup
   chunking/       Cross-page chunker with page provenance
-  embeddings/     Embedder protocol + deterministic FakeEmbedder
-  retrieval/      In-memory cosine index (FAISS lands in PR #2)
+  embeddings/     Embedder protocol + deterministic fake for tests
+  retrieval/      Vector index for chunk retrieval
+  agents/         Planner, evidence critic, risk scoring, orchestrator
+  doctrine/       Doctrine index for legal precedents
   cli.py          Click CLI entry-point
 ```
 
@@ -38,7 +38,3 @@ src/document_intelligence/
 ```bash
 pytest packages/document_intelligence/tests/ -q
 ```
-
-## Spec
-
-See `specs/active/SPEC-0007-document-intelligence-core/` for design, tasks and architecture.

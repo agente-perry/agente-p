@@ -16,6 +16,3 @@ psql "$SUPABASE_DB_URL" -f migrations/0001_extensions.sql
 psql "$SUPABASE_DB_URL" -f migrations/0002_tdr_core.sql
 ```
 
-## Deferred
-
-Entities, relationships, contracts, alerts, legal RAG and Civic Amplifier tables are outside the current MVP.
