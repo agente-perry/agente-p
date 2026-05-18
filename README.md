@@ -1,167 +1,211 @@
-# AgentePerry TDR Scanner
+# Agente Perry
 
-AgentePerry analiza Terminos de Referencia publicos para detectar senales de baja trazabilidad, requisitos restrictivos y entregables obsoletos antes de que el contrato sea adjudicado.
+**Multi-agent system that surfaces risk signals in Peruvian public procurement
+using only publicly available evidence.**
 
-No acusa corrupcion. Genera evidencia textual, preguntas para revision y una base estructurada para que ciudadanos, periodistas o entidades entiendan que TDRs merecen mayor revision.
+Agente Perry analyzes Terms of Reference (TDR) and procurement documents at
+scale, anchoring every signal to a verifiable source fragment. It is built
+for journalists, civic-tech teams and academic researchers working on
+procurement integrity.
 
-> **Arquitectura canonica**: ver [`docs/ARCHITECTURE_AGENTEPERRY.md`](docs/ARCHITECTURE_AGENTEPERRY.md). Define la tesis, las 5 fases, la regla de activacion de GraphRAG y lo que NO se debe construir todavia.
->
-> **Backend unificado**: ver [`docs/BACKEND_UNIFIED_ARCHITECTURE.md`](docs/BACKEND_UNIFIED_ARCHITECTURE.md). Explica como conviven FastAPI, `document_intelligence`, GCS, Neo4j existente y `data/PDF-Base` como corpus doctrinal publico.
+> We do not accuse. We surface signals with traceable public evidence.
+> Every output is investigative input, not a verdict.
 
-## MVP Hack@Latam
+---
 
-El MVP actual es un solo flujo:
+## Why this exists
 
-```text
-TDR ingestion -> PDF parsing -> text cleaning -> chunking -> embeddings -> rule-based flags -> evidence-backed dossier API
+Public procurement in Peru moves billions of soles per year through tens of
+thousands of documents. Most red flags are buried in legalese, scanned PDFs
+and disconnected portals. Manual review does not scale.
+
+Agente Perry is a coordinated system of specialized agents that reads,
+parses, indexes, cross-references and scores these documents, returning a
+**dossier** with quoted evidence and page citations.
+
+---
+
+## Architecture overview
+
+```mermaid
+flowchart TB
+    subgraph Sources[" 📚 Public Sources "]
+        direction LR
+        S1[Procurement portals]
+        S2[Open contracting data]
+        S3[Public registries]
+        S4[Legal doctrine corpus]
+    end
+
+    subgraph Ingestion[" 🔍 Ingestion layer "]
+        direction TB
+        I1[Discovery agent]
+        I2[PDF parser + OCR fallback]
+        I3[Page cleaner + chunker]
+    end
+
+    subgraph Knowledge[" 🧠 Knowledge layer "]
+        direction TB
+        K1[Vector index<br/>pgvector]
+        K2[Entity graph<br/>Neo4j]
+        K3[Doctrine index]
+    end
+
+    subgraph Agents[" ⚖️ Analysis agents "]
+        direction TB
+        A1[Planner]
+        A2[Evidence critic]
+        A3[Risk scoring]
+        A4[Orchestrator]
+    end
+
+    subgraph Output[" 📋 Output "]
+        direction TB
+        O1[Dossier API]
+        O2[Web UI]
+    end
+
+    Sources --> Ingestion
+    Ingestion --> Knowledge
+    Knowledge --> Agents
+    A1 --> A2 --> A3 --> A4
+    A4 --> Output
+
+    style Sources fill:#0f172a,stroke:#3b82f6,color:#e2e8f0
+    style Ingestion fill:#0f172a,stroke:#8b5cf6,color:#e2e8f0
+    style Knowledge fill:#0f172a,stroke:#10b981,color:#e2e8f0
+    style Agents fill:#0f172a,stroke:#ef4444,color:#e2e8f0
+    style Output fill:#0f172a,stroke:#f59e0b,color:#e2e8f0
 ```
 
-El sprint activo se enfoca en:
+### Agent roster
 
-1. Cargar metadata de TDRs publicos en PDF.
-2. Extraer texto limpio por pagina.
-3. Dividir documentos en chunks consultables.
-4. Crear embeddings para busqueda semantica.
-5. Detectar senales iniciales con reglas explicables.
-6. Guardar evidencia textual y numero de pagina.
-7. Preparar un dossier preventivo via API.
+| Agent | Role |
+|-------|------|
+| **Discovery** | Locates and downloads public procurement documents |
+| **PDF parser** | Extracts text with OCR fallback for scanned documents |
+| **Chunker** | Page-aligned chunks with source provenance |
+| **Doctrine retriever** | Surfaces relevant legal precedents per clause |
+| **Planner** | Decides which checks to run on a given document |
+| **Evidence critic** | Validates that each flag is supported by quoted text |
+| **Risk scoring** | Aggregates flags into a calibrated dossier score |
+| **Graph enricher** | Adds entity-context signals from the procurement graph |
+| **Orchestrator** | Coordinates the full audit run end-to-end |
 
-## Fuera del MVP
+---
 
-No implementar ahora:
+## Tech stack
 
-- ONPE, JNE, SUNARP.
-- ConflictMap completo.
-- Graphiti o Neo4j.
-- Mapa nacional.
-- SMS masivo.
-- Civic Amplifier completo.
-- Deteccion automatica de corrupcion.
+| Layer | Technology |
+|-------|------------|
+| Web UI | Next.js 15 (App Router) |
+| API | FastAPI (Python 3.11+) |
+| Document intelligence | Custom agent runtime + AI SDK provider routing |
+| Vector store | Supabase Postgres + pgvector |
+| Entity graph | Neo4j |
+| Object storage | Cloud object storage (provider-agnostic) |
+| Infra | Docker compose for local dev |
 
-Todo eso queda como roadmap post-MVP.
+---
 
-## Estructura
+## Repository layout
 
-```text
+```
 apps/
-  api/                 FastAPI backend: GCS + Neo4j + AuditorGraph bridge
-  scrapers/            foco principal: paquete Python agenteperry
-  web/                 demo visual posterior y dossier API cuando toque SPEC-0005
+  api/                       FastAPI orchestrator and dossier endpoints
+  scrapers/                  Ingestion CLI, parser, chunker, flag engine
+  web/                       Next.js 15 dossier UI
 packages/
-  document_intelligence/ motor documental: parse, chunks, retrieval, flags, critic, safety
-  db/migrations/       schema TDR minimo para Supabase/Postgres + pgvector
-  shared/              tipos compartidos futuros
-docs/
-  INDEX.md             indice maestro para humanos y agentes
-  ARCHITECTURE.md      arquitectura TDR Scanner
-  SCRAPING.md          ingesta TDR y reglas de datos
-  METHODOLOGY.md       metodologia legal-safe y flags TDR
-  PLAN.md              sprints MVP
-  DATA_SOURCES.md      catalogo de fuentes y prioridades
-  LEGACY.md            rama legacy y vision anterior
-  AGENTS_OPENCODE.md   guia de uso eficiente de agentes
-  AGENT_SKILLS.md      skills instalados para agentes
-  reference/           documentos de referencia (inteligencia integrada)
-specs/
-  active/              specs del sprint TDR actual
-  deferred/            specs legacy fuera del MVP
-data/
-  PDF-Base/            unica excepcion versionada: PDFs publicos de doctrina
-  README.md            reglas para data local no versionada
+  document_intelligence/     Planner, evidence critic, risk scoring, doctrine
+  db/                        Postgres migrations and seed registry
+  shared/                    Cross-package types and utilities
+infra/
+  docker/                    Local dev compose
+  supabase/                  Supabase project config
 ```
 
-## Quick Start
+---
+
+## Quick start
 
 ```bash
-cd apps/scrapers
-uv sync --extra dev
-uv run agenteperry tdr index
+# 1. Backend API
+cd apps/api
+uv venv --python 3.11
+uv pip install -e ".[dev]"
+cp .env.example .env  # set credentials
+.venv/bin/uvicorn agenteperry_api.main:app --reload --port 8080
+
+# 2. Document intelligence + ingestion (optional, enables /audit)
+uv pip install -e ../../packages/document_intelligence
+uv pip install -e ../scrapers
+
+# 3. Web UI
+cd ../../apps/web
+pnpm install
+pnpm dev
 ```
 
-Ejemplo local con archivos no versionados:
+Swagger UI: <http://localhost:8080/docs>
 
-```bash
-uv run agenteperry tdr load-manual ../../data/manual_tdrs/metadata.csv
-uv run agenteperry tdr parse ../../storage/raw/tdr/demo.pdf --out ../../storage/processed/tdr/demo.pages.json
-uv run agenteperry tdr chunk ../../storage/processed/tdr/demo.pages.json --out ../../storage/processed/tdr/demo.chunks.json
-uv run agenteperry tdr embed-inputs ../../storage/processed/tdr/demo.chunks.json --out ../../storage/processed/tdr/demo.embedding-inputs.json
-uv run agenteperry tdr flags ../../storage/processed/tdr/demo.pages.json --out ../../storage/processed/tdr/demo.flags.json
-uv run agenteperry tdr smoke-search ../../storage/processed/tdr/demo.chunks.json "formato A3"
-```
+---
 
-## Sprints
+## Methodology
 
-| Sprint | Foco | Entregable verificable |
-|--------|------|------------------------|
-| 0 | Limpieza y foco | Repo comunica AgentePerry TDR Scanner en menos de 2 minutos |
-| 1 | Data Core | `tdr_documents` y `tdr_pages` con 5-20 PDFs reales |
-| 2 | Chunks + Embeddings | Busqueda semantica devuelve fragmentos con pagina y fuente |
-| 3 | Flags | `tdr_flags` contiene `evidence_quote` + `page_number` |
-| 4 | Dossier API | `GET /api/tdr/{id}` devuelve flags, score y preguntas de revision |
+The risk-signal taxonomy and the legal-safe vocabulary are documented in
+[`docs/METHODOLOGY.md`](docs/METHODOLOGY.md). The framework references the
+public **FUNES** methodology published by Ojo Publico.
 
-## Specs Activos
+Every dossier ships with the disclaimer:
 
-| ID | Nombre | Owner |
-|----|--------|-------|
-| [SPEC-0000](specs/active/SPEC-0000-focus-tdr-mvp/spec.md) | Focus TDR MVP | Miguel |
-| [SPEC-0001](specs/active/SPEC-0001-tdr-manual-loader/spec.md) | TDR Manual Loader | John |
-| [SPEC-0002](specs/active/SPEC-0002-tdr-pdf-parser/spec.md) | TDR PDF Parser | John |
-| [SPEC-0003](specs/active/SPEC-0003-tdr-chunk-embeddings/spec.md) | TDR Chunking + Embeddings | Anthony |
-| [SPEC-0004](specs/active/SPEC-0004-tdr-rule-based-flags/spec.md) | TDR Rule-Based Flags | Miguel / Anthony |
-| [SPEC-0005](specs/active/SPEC-0005-tdr-dossier-api/spec.md) | TDR Dossier API | Anthony / Noelia |
+> This analysis identifies risk signals in public documents. It is not an
+> accusation and does not determine responsibility. Requires human review
+> and cross-check with the official source.
 
-## Principio Rector
+---
 
-No acusamos corrupcion. Detectamos senales de riesgo basadas en evidencia publica.
+## Anonymity policy
 
-Usar lenguaje legal-safe:
+This is an anti-corruption project. Several teams working on similar
+hackathons have chosen not to publicly associate their identities with the
+project — names are not shared on social media, repositories, or with
+sponsors. **Teams can compete and win every prize anonymously like any
+other team.**
 
-- Si: "presenta senales de riesgo", "merece revision", "requiere explicacion", "patron atipico".
-- No: "robo", "corrupto", "mafioso", "culpable", "delincuente".
+For this reason:
 
-## Rama Legacy
+- The repository does not list individual contributors.
+- Author metadata in package manifests uses a shared project pseudonym.
+- All inbound communication goes through a single shared mailbox.
 
-La visión anterior del proyecto (Contralatam Agent, ConflictMap, Graphiti, Civic Amplifier, 25+ fuentes) vive preservada en la rama `legacy/contralatam-platform`.
+If you are a team, journalist or organization that wants to collaborate or
+needs to verify identities for legitimate purposes, write to the contact
+address below from your institutional email. We reply within 24–48 hours
+after verifying the requester.
 
-```bash
-# Ver la visión completa anterior
-git checkout legacy/contralatam-platform
+---
 
-# Volver al MVP
-git checkout main
-```
+## Contact
 
-No traer componentes legacy a `main` sin crear primero un spec activo. Ver [`docs/LEGACY.md`](docs/LEGACY.md).
+📧 **hackaton942@gmail.com**
 
-## Uso de Agentes de Código (OpenCode)
+Please include:
 
-Usamos OpenCode intensivamente. Para no desperdiciar créditos ni contexto:
+- The institutional context of your request.
+- A verifiable institutional email or domain.
+- The specific dataset, dossier or finding you want to discuss.
 
-1. **Scope explícito:** "Trabaja en SPEC-0001", no "implementa scraping".
-2. **Repo limpio:** `main` solo tiene TDR Scanner. Legacy está aislado.
-3. **Verificación local:** Corre `pytest`, `ruff`, `pyright` antes de pedir ayuda.
-4. **Iteración corta:** Un cambio, una verificación, siguiente cambio.
+We do not engage through social media, public issues or direct messages.
 
-Guía completa: [`docs/AGENTS_OPENCODE.md`](docs/AGENTS_OPENCODE.md).
+---
 
-## Colaboracion
+## License
 
-Lee en orden:
+MIT. See package-level `pyproject.toml` and `package.json` files.
 
-1. `README.md`
-2. [`AGENTS.md`](AGENTS.md)
-3. [`TEAM.md`](TEAM.md)
-4. [`docs/INDEX.md`](docs/INDEX.md)
-5. [`specs/README.md`](specs/README.md)
-6. El spec activo que vas a tomar.
+---
 
-## Agent Skills
+## Status
 
-El repo incluye skills instalados para Claude Code, OpenCode y Codex-compatible agents.
-
-```bash
-npx skills list --json
-bash scripts/install-agent-skills.sh
-```
-
-Detalles: [`docs/AGENT_SKILLS.md`](docs/AGENT_SKILLS.md).
+MVP. Active development. Internal benchmarks and golden-set evaluation are
+not published. Demos are available under NDA for verified institutions.
