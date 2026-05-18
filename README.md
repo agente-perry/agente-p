@@ -1,96 +1,203 @@
 # Agente Perry
 
-**Multi-agent system that surfaces risk signals in Peruvian public procurement
-using only publicly available evidence.**
+**AI multi-agent auditor for public procurement documents.**
+From 200-page scanned TDRs to evidence-backed risk dossiers with page citations.
+**No accusations. Only verifiable public evidence.**
 
-Agente Perry analyzes Terms of Reference (TDR) and procurement documents at
-scale, anchoring every signal to a verifiable source fragment. It is built
-for journalists, civic-tech teams and academic researchers working on
-procurement integrity.
-
-> We do not accuse. We surface signals with traceable public evidence.
-> Every output is investigative input, not a verdict.
-
----
-
-## Why this exists
-
-Public procurement in Peru moves billions of soles per year through tens of
-thousands of documents. Most red flags are buried in legalese, scanned PDFs
-and disconnected portals. Manual review does not scale.
-
-Agente Perry is a coordinated system of specialized agents that reads,
-parses, indexes, cross-references and scores these documents, returning a
-**dossier** with quoted evidence and page citations.
+![Python](https://img.shields.io/badge/Python-3.11+-3776AB?logo=python&logoColor=white)
+![FastAPI](https://img.shields.io/badge/API-FastAPI-009688?logo=fastapi&logoColor=white)
+![Postgres](https://img.shields.io/badge/Postgres-pgvector-4169E1?logo=postgresql&logoColor=white)
+![Neo4j](https://img.shields.io/badge/Graph-Neo4j-4581C3?logo=neo4j&logoColor=white)
+![LangGraph](https://img.shields.io/badge/Agents-LangGraph-1C3C3C)
+![Tests](https://img.shields.io/badge/tests-400%2B%20collected-brightgreen)
+![Legal Safe](https://img.shields.io/badge/legal--safe-evidence%20only-blue)
+![License](https://img.shields.io/badge/license-MIT-black)
 
 ---
 
-## Architecture overview
+## What it does in 60 seconds
+
+```text
+Public PDF -> Classifier -> OCR fallback -> Page-cleaned chunks
+            -> Retrieval (pgvector) -> Planner agent
+            -> Evidence critic -> Risk scoring
+            -> Neo4j graph enrichment -> Evidence dossier
+```
+
+Reduces the first-pass review of a 200-page procurement document from hours
+to minutes, with every flag anchored to a quoted clause and a page number.
+
+> We do not accuse. We surface signals that deserve review.
+
+---
+
+## Why it matters
+
+Public procurement oversight fails when evidence is buried in hundreds of
+pages of scanned PDFs. Manual review does not scale. Agente Perry turns
+unreadable procurement documents into reviewable dossiers:
+
+- **Journalists** — faster case discovery with quoted evidence.
+- **Citizens** — plain-language explanations of complex contracts.
+- **Auditors** — prioritized signals with traceable provenance.
+- **Civic-tech teams** — reusable open-source infrastructure.
+
+---
+
+## What works today
+
+- TDR PDF parsing with page-level provenance (PyMuPDF).
+- Automatic classifier separates textual / mixed / scanned PDFs.
+- OCR fallback for scanned documents (provider-agnostic, MiniMax client included).
+- LangGraph-based auditor pipeline (planner -> retriever -> evidence critic -> scoring).
+- Doctrine-anchored risk analysis with quoted-evidence validation.
+- Legal-safe vocabulary filter on all outputs.
+- Evidence-backed dossier generation with page citations.
+- Hash-based Change Data Capture detector over procurement datasets (no live scraping required).
+- Neo4j graph enrichment when supplier RUC is available.
+- FastAPI endpoints for health, dossiers, graph and on-demand audit.
+- 400+ tests across scrapers, API and document intelligence packages.
+
+## Current limitations
+
+- The public web UI is not included in this repository.
+- CDC is dataset/hash-based, not real-time SEACE streaming.
+- Neo4j enrichment requires a populated graph and credentials.
+- Demo runs expect PDFs in the local golden-set directory.
+- Roadmap items (social publishing, real-time discovery) are planned, not shipped.
+
+---
+
+## Architecture
 
 ```mermaid
-flowchart TB
-    subgraph Sources[" 📚 Public Sources "]
-        direction LR
-        S1[Procurement portals]
-        S2[Open contracting data]
-        S3[Public registries]
-        S4[Legal doctrine corpus]
-    end
+flowchart LR
+    A[Public<br/>procurement data] --> B[CDC detector<br/>hash-based]
+    B --> C[PDF downloader]
+    C --> D[Classifier +<br/>OCR fallback]
+    D --> E[Chunker +<br/>pgvector retrieval]
+    E --> F[Planner agent]
+    F --> G[Evidence critic]
+    G --> H[Risk scoring]
+    H --> I[Neo4j<br/>graph enrichment]
+    I --> J[Evidence<br/>dossier API]
 
-    subgraph Ingestion[" 🔍 Ingestion layer "]
-        direction TB
-        I1[Discovery agent]
-        I2[PDF parser + OCR fallback]
-        I3[Page cleaner + chunker]
-    end
-
-    subgraph Knowledge[" 🧠 Knowledge layer "]
-        direction TB
-        K1[Vector index<br/>pgvector]
-        K2[Entity graph<br/>Neo4j]
-        K3[Doctrine index]
-    end
-
-    subgraph Agents[" ⚖️ Analysis agents "]
-        direction TB
-        A1[Planner]
-        A2[Evidence critic]
-        A3[Risk scoring]
-        A4[Orchestrator]
-    end
-
-    subgraph Output[" 📋 Output "]
-        direction TB
-        O1[Dossier API]
-        O2[Web UI]
-    end
-
-    Sources --> Ingestion
-    Ingestion --> Knowledge
-    Knowledge --> Agents
-    A1 --> A2 --> A3 --> A4
-    A4 --> Output
-
-    style Sources fill:#0f172a,stroke:#3b82f6,color:#e2e8f0
-    style Ingestion fill:#0f172a,stroke:#8b5cf6,color:#e2e8f0
-    style Knowledge fill:#0f172a,stroke:#10b981,color:#e2e8f0
-    style Agents fill:#0f172a,stroke:#ef4444,color:#e2e8f0
-    style Output fill:#0f172a,stroke:#f59e0b,color:#e2e8f0
+    style A fill:#0f172a,stroke:#3b82f6,color:#e2e8f0
+    style B fill:#0f172a,stroke:#8b5cf6,color:#e2e8f0
+    style C fill:#0f172a,stroke:#8b5cf6,color:#e2e8f0
+    style D fill:#0f172a,stroke:#8b5cf6,color:#e2e8f0
+    style E fill:#0f172a,stroke:#10b981,color:#e2e8f0
+    style F fill:#0f172a,stroke:#ef4444,color:#e2e8f0
+    style G fill:#0f172a,stroke:#ef4444,color:#e2e8f0
+    style H fill:#0f172a,stroke:#ef4444,color:#e2e8f0
+    style I fill:#0f172a,stroke:#10b981,color:#e2e8f0
+    style J fill:#0f172a,stroke:#f59e0b,color:#e2e8f0
 ```
 
 ### Agent roster
 
 | Agent | Role |
 |-------|------|
-| **Discovery** | Locates and downloads public procurement documents |
-| **PDF parser** | Extracts text with OCR fallback for scanned documents |
+| **CDC detector** | Hash-based change detection over local procurement JSONL |
+| **Downloader** | Pulls public procurement documents and metadata |
+| **Classifier** | Decides PDF route (textual / mixed / scanned) |
+| **OCR worker** | Runs OCR for scanned pages, provider-agnostic |
 | **Chunker** | Page-aligned chunks with source provenance |
-| **Doctrine retriever** | Surfaces relevant legal precedents per clause |
-| **Planner** | Decides which checks to run on a given document |
-| **Evidence critic** | Validates that each flag is supported by quoted text |
+| **Planner** | Decides which checks to run on each document |
+| **Evidence critic** | Validates that every flag is backed by quoted text |
 | **Risk scoring** | Aggregates flags into a calibrated dossier score |
-| **Graph enricher** | Adds entity-context signals from the procurement graph |
-| **Orchestrator** | Coordinates the full audit run end-to-end |
+| **Graph enricher** | Adds entity context from the procurement graph |
+| **Orchestrator** | LangGraph state machine that coordinates the run |
+
+---
+
+## Quick start
+
+```bash
+# 1. Install scrapers + document intelligence + API
+cd apps/scrapers
+uv venv && uv pip install -e ".[dev]"
+
+cd ../../packages/document_intelligence
+pip install -e ".[dev]"
+
+cd ../../apps/api
+uv venv --python 3.11
+uv pip install -e ".[dev]"
+uv pip install -e ../../packages/document_intelligence
+uv pip install -e ../scrapers
+cp .env.example .env  # set credentials
+```
+
+### CLI demo
+
+```bash
+# Run the auditor over a single procurement document (LangGraph pipeline)
+bash scripts/run_auditor_demo.sh tdr_salud_pliego_001
+
+# Run the auditor over the full local golden set
+bash scripts/run_auditor_demo.sh --all
+```
+
+### API demo
+
+```bash
+cd apps/api
+.venv/bin/uvicorn agenteperry_api.main:app --reload --port 8080
+
+# In another terminal:
+curl http://localhost:8080/health
+curl http://localhost:8080/demo/cases
+curl http://localhost:8080/dossiers
+curl http://localhost:8080/dossiers/<ocid>
+curl -X POST http://localhost:8080/audit/<ocid>
+```
+
+Swagger UI: <http://localhost:8080/docs>
+
+---
+
+## Example case: ESSALUD TDR
+
+A prepared demo path covers an ESSALUD procurement process:
+
+- **Entity**: ESSALUD
+- **OCID**: `ocds-dgv273-seacev3-988512`
+- **Sector**: Health
+- **Document**: TDR / procurement document
+- **Output**: evidence-backed dossier with page citations
+
+Signals the pipeline can surface on this kind of case:
+
+- Potentially restrictive experience requirements.
+- Excessive notarial or physical documentation burdens.
+- Low-traceability deliverables.
+- Subjective evaluation criteria without an objective rubric.
+
+The dossier always quotes the source clause and cites the page number.
+
+---
+
+## Evidence and safety
+
+Every flag must include:
+
+- `flag_code`
+- `severity`
+- `score_contribution`
+- `evidence_quote`
+- `page_number`
+- `explanation`
+- `detection_method`
+
+The legal-safe filter rejects accusatory vocabulary in any generated text.
+Full taxonomy and rules: [`docs/METHODOLOGY.md`](docs/METHODOLOGY.md).
+
+Every dossier ships with the disclaimer:
+
+> This analysis identifies risk signals in public documents. It is not an
+> accusation and does not determine responsibility. Requires human review
+> and cross-check with the official source.
 
 ---
 
@@ -98,9 +205,10 @@ flowchart TB
 
 | Layer | Technology |
 |-------|------------|
-| Web UI | Next.js 15 (App Router) |
 | API | FastAPI (Python 3.11+) |
+| Agent orchestration | LangGraph |
 | Document intelligence | Custom agent runtime + AI SDK provider routing |
+| PDF parsing | PyMuPDF with classifier and OCR fallback |
 | Vector store | Supabase Postgres + pgvector |
 | Entity graph | Neo4j |
 | Object storage | Cloud object storage (provider-agnostic) |
@@ -113,8 +221,7 @@ flowchart TB
 ```
 apps/
   api/                       FastAPI orchestrator and dossier endpoints
-  scrapers/                  Ingestion CLI, parser, chunker, flag engine
-  web/                       Next.js 15 dossier UI
+  scrapers/                  Ingestion CLI, parser, chunker, flag engine, CDC
 packages/
   document_intelligence/     Planner, evidence critic, risk scoring, doctrine
   db/                        Postgres migrations and seed registry
@@ -122,31 +229,24 @@ packages/
 infra/
   docker/                    Local dev compose
   supabase/                  Supabase project config
+scripts/
+  run_auditor_demo.sh        Interactive LangGraph audit demo
+  run_golden_set.py          Batch evaluation over the local golden set
+  build_doctrine_index.py    Build the legal doctrine index
+  phase1_*.py                Pipeline stages for the discovery phase
+docs/
+  ARCHITECTURE.md            System architecture
+  METHODOLOGY.md             Risk signal taxonomy and legal-safe language
 ```
 
 ---
 
-## Quick start
+## Roadmap
 
-```bash
-# 1. Backend API
-cd apps/api
-uv venv --python 3.11
-uv pip install -e ".[dev]"
-cp .env.example .env  # set credentials
-.venv/bin/uvicorn agenteperry_api.main:app --reload --port 8080
-
-# 2. Document intelligence + ingestion (optional, enables /audit)
-uv pip install -e ../../packages/document_intelligence
-uv pip install -e ../scrapers
-
-# 3. Web UI
-cd ../../apps/web
-pnpm install
-pnpm dev
-```
-
-Swagger UI: <http://localhost:8080/docs>
+- Public web dossier UI.
+- Real-time procurement discovery (live SEACE / OCDS streaming).
+- Expanded doctrine index for additional jurisdictions.
+- Higher-throughput batch audit mode.
 
 ---
 
@@ -155,12 +255,6 @@ Swagger UI: <http://localhost:8080/docs>
 The risk-signal taxonomy and the legal-safe vocabulary are documented in
 [`docs/METHODOLOGY.md`](docs/METHODOLOGY.md). The framework references the
 public **FUNES** methodology published by Ojo Publico.
-
-Every dossier ships with the disclaimer:
-
-> This analysis identifies risk signals in public documents. It is not an
-> accusation and does not determine responsibility. Requires human review
-> and cross-check with the official source.
 
 ---
 
@@ -201,11 +295,4 @@ We do not engage through social media, public issues or direct messages.
 
 ## License
 
-MIT. See package-level `pyproject.toml` and `package.json` files.
-
----
-
-## Status
-
-MVP. Active development. Internal benchmarks and golden-set evaluation are
-not published. Demos are available under NDA for verified institutions.
+MIT. See package-level `pyproject.toml` files.
