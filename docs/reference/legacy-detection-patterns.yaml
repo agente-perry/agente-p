@@ -1,0 +1,424 @@
+# Contralatam Agent — 8 Patrones de Detección del Detective
+# Cada patrón define: condición, score, fuentes requeridas, query SQL y prompt de síntesis
+
+meta:
+  version: "1.0"
+  publish_threshold: 0.50    # score >= 0.50 → crear caso público
+  critical_threshold: 0.75   # score >= 0.75 → alerta SMS
+  score_normalization: true  # suma de scores se normaliza a [0,1]
+
+patterns:
+
+  - id: pattern_1
+    name: "El Socio Invisible"
+    subtitle: "Conflicto de interés por familiar"
+    score_max: 0.45
+    risk_level: ALTO
+    sources_required:
+      - OCDS           # contrato + comité
+      - SIDJI          # DJI con familiares declarados
+      - SUNARP         # representante legal de la empresa
+    narrative: >
+      El funcionario que evaluó o firmó el contrato tiene un familiar directo
+      que es representante legal o socio de la empresa ganadora.
+    chain:
+      - node: Contract
+        edge: MIEMBRO_COMITE
+      - node: Person (funcionario)
+        edge: FAMILIAR_DE
+      - node: Person (familiar)
+        edge: REPRESENTANTE_DE
+      - node: Company (ganadora)
+        edge: GANO_CONTRATO
+        back_to: Contract
+    conditions:
+      - "relacion FAMILIAR_DE EXISTS (fuente DJI o apellido inferido)"
+      - "contrato_fecha BETWEEN funcionario_cargo_inicio AND funcionario_cargo_fin"
+      - "empresa.ruc IN contract.supplier_ids"
+    score_components:
+      familiar_dji_declarado:  0.25   # confirmado en DJI
+      familiar_apellido_cruce: 0.15   # inferido por apellido común
+      unico_postor:            0.10   # bonus si además fue único postor
+      sancion_vigente:         0.10   # bonus si funcionario tiene sanción
+    sql: |
+      SELECT
+        c.ocid,
+        p_func.dni        AS funcionario_dni,
+        p_func.nombres    AS funcionario_nombre,
+        p_fam.dni         AS familiar_dni,
+        p_fam.nombres     AS familiar_nombre,
+        r_fam.properties->>'tipo_parentesco' AS parentesco,
+        emp.canonical_id  AS empresa_ruc,
+        emp.display_name  AS empresa_nombre,
+        c.monto_contratado,
+        c.num_postores
+      FROM contracts c
+      JOIN relationships r_comite
+        ON r_comite.target_id = c.id::uuid
+        AND r_comite.rel_type = 'MIEMBRO_COMITE'
+      JOIN entities p_func ON p_func.id = r_comite.source_id
+      JOIN relationships r_fam
+        ON r_fam.source_id = p_func.id
+        AND r_fam.rel_type = 'FAMILIAR_DE'
+      JOIN entities p_fam ON p_fam.id = r_fam.target_id
+      JOIN relationships r_repr
+        ON r_repr.source_id = p_fam.id
+        AND r_repr.rel_type = 'REPRESENTANTE_DE'
+      JOIN entities emp ON emp.id = r_repr.target_id
+        AND emp.entity_type = 'company'
+      WHERE emp.canonical_id = ANY(
+        SELECT jsonb_array_elements_text(raw_ocds->'awards'->0->'suppliers'->0->'identifier'->>'id')
+        FROM contracts c2 WHERE c2.ocid = c.ocid
+      )
+      AND c.fecha_conv BETWEEN
+        (r_comite.valid_from - INTERVAL '30 days') AND COALESCE(r_comite.valid_until, NOW());
+    llm_evidence_fields:
+      - funcionario_nombre
+      - familiar_nombre
+      - parentesco
+      - empresa_nombre
+      - monto_contratado
+      - num_postores
+      - fuente_parentesco
+
+  - id: pattern_2
+    name: "El Aportante Favorito"
+    subtitle: "Retorno de inversión electoral"
+    score_max: 0.40
+    risk_level: ALTO
+    sources_required:
+      - ONPE_CLARIDAD   # aporte de empresa a partido
+      - JNE             # partido governa entidad
+      - OCDS            # empresa gana contrato de esa entidad
+    narrative: >
+      Una empresa aportó dinero a la campaña del partido que actualmente
+      gobierna la entidad contratante. Después de las elecciones, esa misma
+      empresa ganó contratos con esa entidad.
+    chain:
+      - node: Company
+        edge: APORTO_A
+      - node: PoliticalOrg
+        edge: GOVERNS
+      - node: PublicEntity
+        edge: COMPRO_A
+        back_to: Company
+    conditions:
+      - "fecha_aporte < fecha_elecciones < fecha_contrato"
+      - "entidad_contratante.ubigeo MATCHES jurisdiccion_ganada_por_partido"
+      - "monto_contratos_postelectorales > 0"
+    score_components:
+      aporte_confirmado:        0.20
+      contrato_post_electoral:  0.10
+      ratio_monto_alto:         0.10   # si contrato/aporte > 10x
+    sql: |
+      SELECT
+        emp.canonical_id  AS empresa_ruc,
+        emp.display_name  AS empresa_nombre,
+        ae.monto          AS monto_aporte,
+        ae.campana,
+        ae.fecha_aporte,
+        po.nombre         AS partido,
+        pe.display_name   AS entidad,
+        SUM(c.monto_contratado) AS total_contratos_post,
+        COUNT(c.ocid)     AS num_contratos
+      FROM entities emp
+      JOIN relationships r_aporte
+        ON r_aporte.source_id = emp.id AND r_aporte.rel_type = 'APORTO_A'
+      JOIN electoral_contributions ae ON ae.id::text = r_aporte.properties->>'contribution_id'
+      JOIN entities po ON po.id = r_aporte.target_id
+      JOIN relationships r_gov
+        ON r_gov.source_id = po.id AND r_gov.rel_type = 'GOVERNS'
+      JOIN entities pe ON pe.id = r_gov.target_id
+      JOIN contracts c ON c.buyer_id = pe.id
+        AND c.fecha_conv > ae.fecha_aporte
+      GROUP BY emp.canonical_id, emp.display_name, ae.monto, ae.campana,
+               ae.fecha_aporte, po.nombre, pe.display_name
+      HAVING SUM(c.monto_contratado) > ae.monto * 5;
+
+  - id: pattern_3
+    name: "La Empresa Fantasma"
+    subtitle: "Creada para ganar"
+    score_max: 0.35
+    risk_level: ALTO
+    sources_required:
+      - SUNAT_PADRON    # fecha_inicio_actividades + domicilio
+      - OCDS            # contrato ganado
+    narrative: >
+      La empresa ganadora fue registrada hace menos de 12 meses,
+      comparte domicilio fiscal con 5+ empresas, y ganó como único
+      postor un contrato de monto atípico.
+    conditions:
+      - "MONTHS_BETWEEN(contrato.fecha_conv, empresa.fecha_inicio_act) < 12"
+      - "empresa.flag_domicilio_compartido == true"
+      - "contrato.num_postores == 1"
+      - "contrato.percentil_monto > 0.85"
+    score_components:
+      empresa_nueva_lt_6m:   0.15
+      empresa_nueva_lt_12m:  0.10
+      domicilio_compartido:  0.08
+      no_habido:             0.07
+      baja_fiscal:           0.10
+      unico_postor:          0.05  # ya contado en pattern base
+    sql: |
+      SELECT
+        c.ocid,
+        emp.canonical_id  AS ruc,
+        emp.display_name  AS empresa,
+        (emp.metadata->>'fecha_inicio_act')::DATE AS fecha_fundacion,
+        DATE_PART('month', AGE(c.fecha_conv,
+          (emp.metadata->>'fecha_inicio_act')::DATE)) AS meses_al_contrato,
+        emp.metadata->>'condicion_domicilio' AS condicion,
+        (emp.metadata->>'empresas_mismo_domicilio')::INT AS empresas_dom,
+        c.monto_contratado,
+        c.num_postores,
+        c.percentil_monto
+      FROM contracts c
+      JOIN relationships r ON r.rel_type = 'GANO_CONTRATO'
+        AND r.target_id = c.id::uuid
+      JOIN entities emp ON emp.id = r.source_id
+      WHERE c.num_postores = 1
+        AND (emp.metadata->>'fecha_inicio_act')::DATE > c.fecha_conv - INTERVAL '12 months'
+        AND (
+          (emp.metadata->>'empresas_mismo_domicilio')::INT > 5
+          OR emp.metadata->>'condicion_domicilio' = 'NO HABIDO'
+        )
+      ORDER BY c.monto_contratado DESC;
+
+  - id: pattern_4
+    name: "El Monopolio Silencioso"
+    subtitle: "Proveedor recurrente"
+    score_max: 0.30
+    risk_level: MEDIO
+    sources_required:
+      - OCDS            # histórico de contratos entidad
+      - MEF             # presupuesto de la entidad (PIM)
+    narrative: >
+      La misma empresa concentra más del 50% del presupuesto ejecutado
+      de la entidad en los últimos 3 años, ganando contratos de forma
+      sistemática como único o casi único postor.
+    conditions:
+      - "pct_presupuesto_entidad > 0.50 en últimos 3 años"
+      - "win_rate_mismo_entidad > 0.70"
+      - "num_contratos >= 3"
+    score_components:
+      concentracion_60pct:    0.20
+      concentracion_50pct:    0.15
+      win_rate_80pct:         0.10
+      anyos_consecutivos_3:   0.05
+    sql: |
+      WITH empresa_stats AS (
+        SELECT
+          c.buyer_id,
+          r.source_id AS empresa_id,
+          COUNT(*) AS num_contratos,
+          SUM(c.monto_contratado) AS total_monto,
+          SUM(c.monto_contratado) / SUM(SUM(c.monto_contratado))
+            OVER (PARTITION BY c.buyer_id) AS pct_presupuesto
+        FROM contracts c
+        JOIN relationships r ON r.rel_type = 'GANO_CONTRATO'
+          AND r.target_id = c.id::uuid
+        WHERE c.fecha_conv >= NOW() - INTERVAL '3 years'
+        GROUP BY c.buyer_id, r.source_id
+      )
+      SELECT
+        pe.display_name AS entidad,
+        emp.display_name AS empresa,
+        emp.canonical_id AS ruc,
+        es.num_contratos,
+        es.total_monto,
+        ROUND(es.pct_presupuesto * 100, 1) AS pct_presupuesto
+      FROM empresa_stats es
+      JOIN entities pe ON pe.id = es.buyer_id
+      JOIN entities emp ON emp.id = es.empresa_id
+      WHERE es.pct_presupuesto > 0.50
+        AND es.num_contratos >= 3
+      ORDER BY es.pct_presupuesto DESC;
+
+  - id: pattern_5
+    name: "El Comité Cómplice"
+    subtitle: "Mismo evaluador, mismo ganador"
+    score_max: 0.35
+    risk_level: ALTO
+    sources_required:
+      - SEACE           # composición de comités
+      - OCDS            # ganadores
+    narrative: >
+      El mismo funcionario presidió múltiples comités de selección y
+      en la mayoría de ellos ganó siempre la misma empresa, con único postor.
+    conditions:
+      - "num_comites_presididos >= 3"
+      - "win_rate_empresa_favorita >= 0.75"
+      - "avg_postores <= 1.5"
+    score_components:
+      win_rate_90pct: 0.25
+      win_rate_75pct: 0.18
+      todos_unico_postor: 0.10
+    sql: |
+      WITH comite_stats AS (
+        SELECT
+          r_com.source_id AS funcionario_id,
+          r_gan.source_id AS empresa_id,
+          COUNT(*) AS contratos_juntos,
+          COUNT(*) FILTER (WHERE c.num_postores = 1) AS contratos_unico_postor
+        FROM relationships r_com
+        JOIN contracts c ON c.id::uuid = r_com.target_id
+        JOIN relationships r_gan ON r_gan.target_id = c.id::uuid
+          AND r_gan.rel_type = 'GANO_CONTRATO'
+        WHERE r_com.rel_type = 'MIEMBRO_COMITE'
+          AND r_com.properties->>'rol' = 'presidente'
+        GROUP BY r_com.source_id, r_gan.source_id
+        HAVING COUNT(*) >= 3
+      ),
+      total_comites AS (
+        SELECT source_id, COUNT(*) AS total FROM relationships
+        WHERE rel_type = 'MIEMBRO_COMITE' GROUP BY source_id
+      )
+      SELECT
+        p.display_name AS funcionario,
+        p.canonical_id AS dni,
+        emp.display_name AS empresa_favorita,
+        emp.canonical_id AS empresa_ruc,
+        cs.contratos_juntos,
+        tc.total AS total_comites_presididos,
+        ROUND(cs.contratos_juntos::numeric / tc.total * 100, 1) AS win_rate_pct,
+        cs.contratos_unico_postor
+      FROM comite_stats cs
+      JOIN total_comites tc ON tc.source_id = cs.funcionario_id
+      JOIN entities p ON p.id = cs.funcionario_id
+      JOIN entities emp ON emp.id = cs.empresa_id
+      WHERE cs.contratos_juntos::numeric / tc.total >= 0.75
+      ORDER BY win_rate_pct DESC;
+
+  - id: pattern_6
+    name: "El Sancionado Activo"
+    subtitle: "Inhabilitado contratando"
+    score_max: 0.50
+    risk_level: CRÍTICO
+    sources_required:
+      - CGR_SANCIONES   # sanciones vigentes
+      - SUNAT_PADRON    # representante legal
+      - OCDS            # contrato activo
+    narrative: >
+      El representante legal de la empresa ganadora tiene una inhabilitación
+      vigente de la Contraloría al momento de la firma del contrato.
+    conditions:
+      - "sancion.vigente == true OR sancion.fecha_fin >= contrato.fecha_conv"
+      - "sancion.tipo_sancion IN ['INHABILITACION','SUSPENSION']"
+      - "sancion.sancionado_dni IN empresa.representantes_legales"
+    score_components:
+      inhabilitacion_vigente: 0.40
+      suspension_vigente:     0.30
+      empresa_misma_entidad:  0.10   # bonus si misma entidad que sancionó
+    sql: |
+      SELECT
+        c.ocid,
+        c.fecha_conv,
+        c.monto_contratado,
+        emp.canonical_id  AS empresa_ruc,
+        emp.display_name  AS empresa,
+        p.canonical_id    AS representante_dni,
+        p.display_name    AS representante_nombre,
+        s.tipo_sancion,
+        s.fecha_inicio    AS sancion_desde,
+        s.fecha_fin       AS sancion_hasta,
+        CASE WHEN s.fecha_fin IS NULL OR s.fecha_fin >= c.fecha_conv
+             THEN true ELSE false END AS vigente_al_contrato
+      FROM contracts c
+      JOIN relationships r_gan ON r_gan.target_id = c.id::uuid
+        AND r_gan.rel_type = 'GANO_CONTRATO'
+      JOIN entities emp ON emp.id = r_gan.source_id
+      JOIN relationships r_repr ON r_repr.target_id = emp.id
+        AND r_repr.rel_type = 'REPRESENTANTE_DE'
+      JOIN entities p ON p.id = r_repr.source_id
+      JOIN relationships r_sanc ON r_sanc.source_id = p.id
+        AND r_sanc.rel_type = 'TIENE_SANCION'
+      JOIN sanciones s ON s.id::text = r_sanc.properties->>'sancion_id'
+      WHERE s.tipo_sancion IN ('INHABILITACION', 'SUSPENSION')
+        AND s.fecha_inicio <= c.fecha_conv
+        AND (s.fecha_fin IS NULL OR s.fecha_fin >= c.fecha_conv)
+      ORDER BY c.monto_contratado DESC;
+
+  - id: pattern_7
+    name: "La Ventana Corta"
+    subtitle: "Plazo diseñado para excluir competidores"
+    score_max: 0.25
+    risk_level: MEDIO
+    sources_required:
+      - OCDS
+    narrative: >
+      El proceso de licitación tuvo un plazo de convocatoria menor a 5 días
+      hábiles, con único postor y monto superior al percentil 90 de su categoría.
+    conditions:
+      - "dias_plazo_conv < 5"
+      - "num_postores == 1"
+      - "percentil_monto > 0.90"
+    score_components:
+      plazo_lt_3_dias:    0.15
+      plazo_lt_5_dias:    0.10
+      unico_postor:       0.08
+      monto_p90:          0.07
+    sql: |
+      SELECT
+        c.ocid,
+        pe.display_name   AS entidad,
+        emp.display_name  AS empresa,
+        emp.canonical_id  AS ruc,
+        c.dias_plazo_conv,
+        c.num_postores,
+        c.monto_contratado,
+        c.percentil_monto,
+        c.tender_method
+      FROM contracts c
+      JOIN entities pe ON pe.id = c.buyer_id
+      JOIN relationships r ON r.rel_type = 'GANO_CONTRATO'
+        AND r.target_id = c.id::uuid
+      JOIN entities emp ON emp.id = r.source_id
+      WHERE c.dias_plazo_conv < 5
+        AND c.num_postores = 1
+        AND c.percentil_monto > 0.90
+      ORDER BY c.monto_contratado DESC;
+
+  - id: pattern_8
+    name: "El Conflicto Declarado"
+    subtitle: "DJI activa ignorada"
+    score_max: 0.45
+    risk_level: CRÍTICO
+    sources_required:
+      - SIDJI            # DJI del funcionario
+      - OCDS             # contrato en la misma entidad
+    narrative: >
+      El funcionario declaró en su DJI tener participación en la empresa
+      que ganó un contrato en la entidad donde él trabaja durante ese período.
+    conditions:
+      - "dji.vinculos_empresariales CONTAINS empresa.ruc"
+      - "contrato.buyer == funcionario.entidad_actual"
+      - "dji.fecha_presentacion OVERLAP contrato.fecha_conv"
+    score_components:
+      vinculo_directo_dji:    0.35
+      misma_entidad:          0.10
+    sql: |
+      SELECT
+        c.ocid,
+        c.monto_contratado,
+        p.canonical_id    AS funcionario_dni,
+        p.display_name    AS funcionario_nombre,
+        p.metadata->>'cargo_actual' AS cargo,
+        emp.canonical_id  AS empresa_ruc,
+        emp.display_name  AS empresa,
+        dji.fecha_presentacion,
+        dji.vinculos_empresariales
+      FROM contracts c
+      JOIN relationships r_gan ON r_gan.target_id = c.id::uuid
+        AND r_gan.rel_type = 'GANO_CONTRATO'
+      JOIN entities emp ON emp.id = r_gan.source_id
+      JOIN relationships r_dji ON r_dji.target_id = emp.id
+        AND r_dji.rel_type = 'VINCULO_DJI'
+      JOIN entities p ON p.id = r_dji.source_id
+      JOIN interest_declarations dji
+        ON dji.funcionario_dni = p.canonical_id
+      JOIN relationships r_func ON r_func.source_id = p.id
+        AND r_func.rel_type = 'FUNCIONARIO_EN'
+        AND r_func.target_id = c.buyer_id
+      WHERE dji.fecha_presentacion <= c.fecha_conv
+        AND (r_func.valid_until IS NULL OR r_func.valid_until >= c.fecha_conv)
+      ORDER BY c.monto_contratado DESC;

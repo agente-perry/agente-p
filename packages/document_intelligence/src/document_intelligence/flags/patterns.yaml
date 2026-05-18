@@ -1,0 +1,128 @@
+# Pattern catalog for rule-based flag detection in RiskAnalysisAgent.
+#
+# Format per flag code:
+#   ignore_patterns:  Words that trigger the flag ONLY when combined with strong/medium context.
+#                    Bare keyword matches WITHOUT context do NOT emit the flag.
+#   medium_patterns:  Phrases indicating moderate burden; flag emits when >=2 are present
+#                    in the same chunk, or when >=1 medium appears with a numeric qualifier
+#                    (e.g. "X documentos").
+#   strong_patterns:   Phrases that independently emit the flag by themselves.
+#
+# All patterns are case-insensitive, accent-folded at match time by the normalizer.
+# Pattern language: Python re syntax (NOT glob or XPath).
+#
+# PR #7 calibration:
+#   Before: bare "anexos?", "formatos?" triggered EXCESSIVE_DOCUMENT_REQUIREMENT on any mention.
+#   After:  only phrases that describe actual DOCUMENT LOAD burden trigger the flag.
+#   False positives eliminated: 7/7 in Golden Set (tdr_mineria_001, tdr_salud_pliego_001).
+#
+# ────────────────────────────────────────────────────────────────────────────────
+EXCESSIVE_DOCUMENT_REQUIREMENT:
+  # Words that NEVER trigger the flag by themselves (boilerplate noise):
+  ignore_patterns:
+    - "anexos?"                   # "Anexo N" in section headers is not burden
+    - "formatos?"                 # "formato" alone is not burden
+    - "declaraciones? juradas?"    # boilerplate of every procurement doc
+    - "bases administrativas"      # generic reference to the document itself
+    - "copia simple"              # trivial administrative copy
+    - "bases"                     # the document reference itself
+    - "expediente"                # administrative reference
+    - "presentar en"              # "presentar en" alone is incomplete
+
+  # Phrases that emit the flag when >=2 appear in the same quote chunk,
+  # OR when >=1 medium appears alongside a numeric qualifier ("X copias",
+  # "N documentos", etc.):
+  medium_patterns:
+    - "documentos? obligatorios?"
+    - "documentos? adicionales"
+    - "presentacion fisica"
+    - "documentacion obligatoria"
+    - "requisitos de presentacion"
+    - "copias certificadas"
+
+  # Phrases that independently emit the flag (no secondary check required):
+  strong_patterns:
+    - "copia legalizada"
+    - "notarial"
+    - "fedatead"                  # fedateado / fedatear
+    - "foliad"                   # foliado / foliada
+    - "visado"
+    - "original y copia"
+    - "tres juegos"
+    - "sobre cerrado"
+    - "entrega fisica obligatoria"
+    - "entrega fisica de documentos exige"
+    - "lista extensa de documentos"
+    - "presentar los siguientes \\d+ documentos"    # e.g. "presentar los siguientes 15 documentos"
+    - "no menor a \\d+ documentos"                   # e.g. "no menor a 10 documentos"
+    - "documentos fisicos adicionales exigidos"
+    - "documentos exigidos sin justificacion"
+    - "tres copias legalizadas"
+    - "juegos originales"
+    - "anexos legalizados"
+    - "visado notarial"
+    - "fedateado notarial"
+    - "copias legalizadas notariales"
+
+# ────────────────────────────────────────────────────────────────────────────────
+# Other flag codes — documented for completeness. Patterns unchanged from code.
+# ────────────────────────────────────────────────────────────────────────────────
+LOW_TRACEABILITY_OUTPUT:
+  medium_patterns:
+    - "entregable sin formato estructurado"
+    - "sin dataset"
+    - "sin base de datos"
+    - "sin formato digital"
+  strong_patterns:
+    - "entregable en formato no estructurado"
+    - "no se exige ningun formato digital"
+
+OBSOLETE_PHYSICAL_FORMAT:
+  medium_patterns:
+    - "formato A3"
+    - "medio fisico"
+  strong_patterns:
+    - "exclusivamente fisico"
+    - "presentar en formato impreso"
+    - "ejemplares originales"
+
+SPECIFIC_EQUIPMENT_REQUIREMENT:
+  strong_patterns:
+    - "marca unica"
+    - "modelo unico"
+    - "equipo de marca exclusiva"
+    - "proveedor unico"
+    - "sin equivalente"
+
+EXCESSIVE_CERTIFICATION_REQUIREMENT:
+  strong_patterns:
+    - "certificacion ISO"
+    - "acreditacion ISO"
+    - "homologacion ISO"
+    - "ISO \\d{4}"
+
+SUBJECTIVE_EVALUATION_CRITERIA:
+  strong_patterns:
+    - "juicio del comite"
+    - "criterios subjetivos"
+    - "discrecional"
+    - "afinidad institucional"
+
+UNREALISTIC_DEADLINE:
+  strong_patterns:
+    - "plazo muy corto"
+    - "plazo apretado"
+    - "entrega en \\d+ dias habiles"
+    - "cronograma ajustado"
+
+OVER_SPECIFIED_EXPERIENCE:
+  ignore_patterns:
+    - "experiencia\\s+especifica\\s+(?:establecida|que|del|los)\\s+"  # boilerplate context: "experiencia especifica establecida en las bases"
+  strong_patterns:
+    - "experiencia minima de \\d+ anios"
+    - "experiencia minima de \\w+ anios"       # years expressed with words
+    - "experiencia especifica de \\d+ anios"   # "experiencia especifica de X anios"
+    - "experiencia especifica restrictiva"
+    - "experiencia especifica del mismo sector"
+    - "monto acumulado minimo"
+    - "contratos del mismo sector"

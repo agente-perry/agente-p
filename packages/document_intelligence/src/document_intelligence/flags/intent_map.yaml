@@ -1,0 +1,69 @@
+# Intent → flag-expansion map.
+#
+# When the user question matches any trigger phrase from an intent, the
+# PlannerAgent expands the candidate flag set to include every code under
+# ``expands_to``. This is the primary recall mechanism for general questions
+# like "Detecta señales de baja trazabilidad y requisitos restrictivos".
+#
+# Matching is accent-folded and case-insensitive; trigger phrases match as
+# substrings on the normalized question.
+
+risk_scan:
+  trigger_phrases:
+    - riesgo
+    - senales
+    - señales
+    - restrictivos
+    - baja trazabilidad
+    - revisar
+    - sospechoso
+    - sospechosa
+    - atipico
+    - atipica
+    - irregularidad
+    - patron
+    - documentos obligatorios
+    - documentacion exigida
+  expands_to:
+    - EXCESSIVE_DOCUMENT_REQUIREMENT
+    - SUBJECTIVE_EVALUATION_CRITERIA
+    - SPECIFIC_EQUIPMENT_REQUIREMENT
+    - EXCESSIVE_CERTIFICATION_REQUIREMENT
+    - LOW_TRACEABILITY_OUTPUT
+    - OBSOLETE_PHYSICAL_FORMAT
+    - UNREALISTIC_DEADLINE
+    - OVER_SPECIFIED_EXPERIENCE
+
+documentary_burden:
+  trigger_phrases:
+    - documentos
+    - copias
+    - notarial
+    - legalizada
+    - papeleo
+    - fedateado
+  expands_to:
+    - EXCESSIVE_DOCUMENT_REQUIREMENT
+    - OBSOLETE_PHYSICAL_FORMAT
+
+evaluation_discretion:
+  trigger_phrases:
+    - evaluacion
+    - subjetivo
+    - subjetiva
+    - juicio
+    - discrecional
+    - comite
+  expands_to:
+    - SUBJECTIVE_EVALUATION_CRITERIA
+
+market_restriction:
+  trigger_phrases:
+    - marca
+    - modelo
+    - exclusiv
+    - proveedor unico
+    - especificacion tecnica
+  expands_to:
+    - SPECIFIC_EQUIPMENT_REQUIREMENT
+    - EXCESSIVE_CERTIFICATION_REQUIREMENT

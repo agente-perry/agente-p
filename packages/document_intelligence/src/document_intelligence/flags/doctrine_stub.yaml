@@ -1,0 +1,85 @@
+# Doctrine stub — minimal subset used when the collaborator artifact is unavailable.
+# Entries paraphrase the underlying public methodology so the pipeline can run
+# end-to-end during development. Replace by loading the real manifest.json once
+# the collaborator publishes the artifact.
+
+- chunk_id: ocp.tender.over_specified_experience.001
+  source: "OCP Red Flags for Integrity Guide (stub paraphrase)"
+  section: "Tender phase / Bidder qualification"
+  page: 34
+  flag_code: OVER_SPECIFIED_EXPERIENCE
+  text: >
+    Experience requirements written so narrowly that only one historical supplier
+    can satisfy them are a strong signal of bid tailoring and reduced competition.
+
+- chunk_id: ocp.tender.specific_equipment_requirement.001
+  source: "OCP Red Flags for Integrity Guide (stub paraphrase)"
+  section: "Tender phase / Technical specifications"
+  page: 35
+  flag_code: SPECIFIC_EQUIPMENT_REQUIREMENT
+  text: >
+    Specifying a single brand, model or proprietary part number without an open
+    equivalent clause restricts the bidder pool and signals possible favouritism.
+
+- chunk_id: ocp.tender.excessive_certification.001
+  source: "OCP Red Flags for Integrity Guide (stub paraphrase)"
+  section: "Tender phase / Documentary requirements"
+  page: 36
+  flag_code: EXCESSIVE_CERTIFICATION_REQUIREMENT
+  text: >
+    Demanding certifications disproportionate to the contract value or scope
+    creates artificial entry barriers and is a recognized risk pattern.
+
+- chunk_id: ocp.tender.excessive_documents.001
+  source: "OCP Red Flags for Integrity Guide (stub paraphrase)"
+  section: "Tender phase / Documentary requirements"
+  page: 37
+  flag_code: EXCESSIVE_DOCUMENT_REQUIREMENT
+  text: >
+    Long lists of mandatory administrative documents, especially those with
+    short submission windows, deter small bidders and concentrate awards.
+
+- chunk_id: ocp.tender.unrealistic_deadline.001
+  source: "OCP Red Flags for Integrity Guide (stub paraphrase)"
+  section: "Tender phase / Timeline"
+  page: 38
+  flag_code: UNREALISTIC_DEADLINE
+  text: >
+    Submission deadlines materially shorter than the legal minimum, or shorter
+    than peer procurements of similar value, are a flag for steering.
+
+- chunk_id: ocp.award.subjective_evaluation.001
+  source: "OCP Red Flags for Integrity Guide (stub paraphrase)"
+  section: "Award phase / Evaluation criteria"
+  page: 40
+  flag_code: SUBJECTIVE_EVALUATION_CRITERIA
+  text: >
+    Evaluation criteria that depend on committee judgement without measurable
+    rubrics or weights enable discretionary award decisions.
+
+- chunk_id: ocp.implementation.low_traceability.001
+  source: "OCP Red Flags for Integrity Guide (stub paraphrase)"
+  section: "Implementation phase / Output traceability"
+  page: 47
+  flag_code: LOW_TRACEABILITY_OUTPUT
+  text: >
+    Deliverables that lack structured datasets, machine-readable records or
+    audit logs limit downstream oversight and citizen monitoring.
+
+- chunk_id: ocp.implementation.physical_only_format.001
+  source: "OCP Red Flags for Integrity Guide (stub paraphrase)"
+  section: "Implementation phase / Output traceability"
+  page: 48
+  flag_code: OBSOLETE_PHYSICAL_FORMAT
+  text: >
+    Outputs required exclusively in printed or physical form, without a
+    digital counterpart, reduce traceability and are a known risk indicator.
+
+- chunk_id: oecd.ai.no_audit_trail.001
+  source: "OECD Governing with AI 2025 (stub paraphrase)"
+  section: "Public procurement / AI accountability"
+  page: 112
+  flag_code: AI_NO_AUDIT_TRAIL
+  text: >
+    Procurements that contemplate AI components without governance, audit
+    trail or human-in-the-loop requirements present accountability risks.

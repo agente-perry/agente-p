@@ -1,0 +1,32 @@
+# Canonical cluster labels and their detection keywords.
+# A section heading (or chunk section_hint) matches a cluster when ANY of its
+# keyword anchors appear as a substring (case-insensitive, accent-folded).
+
+- label: Objeto y finalidad
+  keywords: ["OBJETO", "FINALIDAD PUBLICA", "FINALIDAD"]
+- label: Antecedentes y justificación
+  keywords: ["ANTECEDENT", "JUSTIFICAC", "BASE LEGAL"]
+- label: Alcance del servicio
+  keywords: ["ALCANCE", "DESCRIPCION DEL SERVICIO", "DESCRIPCION DEL OBJETO"]
+- label: Requisitos técnicos
+  keywords: ["REQUISITOS TECNICOS", "ESPECIFICACIONES TECNICAS", "TERMINOS DE REFERENCIA", "REQUERIMIENT"]
+- label: Experiencia del postor
+  keywords: ["EXPERIENCIA DEL POSTOR", "EXPERIENCIA MINIMA", "EXPERIENCIA"]
+- label: Personal clave
+  keywords: ["PERSONAL CLAVE", "PERFIL DEL PERSONAL", "EQUIPO PROFESIONAL", "PERSONAL"]
+- label: Equipamiento
+  keywords: ["EQUIPAMIENTO", "EQUIPOS", "INSTRUMENTAL"]
+- label: Entregables
+  keywords: ["ENTREGABLES", "PRODUCTOS", "INFORMES"]
+- label: Plazos
+  keywords: ["PLAZO", "CRONOGRAMA", "DIAS CALENDARIO"]
+- label: Forma de pago
+  keywords: ["FORMA DE PAGO", "PAGO", "FACTURACION"]
+- label: Penalidades
+  keywords: ["PENALIDAD", "MULTA"]
+- label: Criterios de evaluación
+  keywords: ["CRITERIOS DE EVALUACION", "EVALUACION DE PROPUESTAS", "EVALUACION", "PUNTAJE"]
+- label: Anexos / formatos
+  keywords: ["ANEXO", "FORMATO N", "FORMATOS"]
+- label: Confidencialidad y propiedad
+  keywords: ["CONFIDENCIAL", "PROPIEDAD INTELECTUAL", "DERECHOS DE AUTOR"]
