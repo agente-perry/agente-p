@@ -6,7 +6,8 @@
       "Bash(gcloud storage buckets list *)",
       "Bash(gcloud storage ls *)",
       "Bash(dir C:UsersAfkunGTDocumentsHACKATON *)",
-      "Bash(gcloud storage *)"
+      "Bash(gcloud storage *)",
+      "Bash(node -e ' *)"
     ]
   }
 }

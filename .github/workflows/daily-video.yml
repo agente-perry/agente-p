@@ -1,0 +1,241 @@
+name: Daily Radiografia Video
+
+on:
+  schedule:
+    - cron: "0 8 * * *"
+  workflow_dispatch:
+    inputs:
+      modo_test:
+        description: "Skip Instagram publishing"
+        type: boolean
+        default: false
+      usar_ejemplo:
+        description: "Use example insight JSON instead of scraping"
+        type: boolean
+        default: false
+      skip_audio:
+        description: "Skip ElevenLabs TTS, use silent placeholder"
+        type: boolean
+        default: false
+
+env:
+  PYTHONPATH: ${{ github.workspace }}/generar-reels
+  TZ: America/Lima
+
+jobs:
+  generate-and-publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: generar-reels
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: generar-reels/requirements.txt
+
+      - name: Set up Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: generar-reels/package-lock.json
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y ffmpeg jq \
+            libnss3 libatk1.0-0 libatk-bridge2.0-0 libcups2 libdrm2 \
+            libxkbcommon0 libxcomposite1 libxdamage1 libxfixes3 libxrandr2 \
+            libgbm1 libx11-xcb1 libxss1
+          sudo apt-get install -y libasound2t64 2>/dev/null \
+            || sudo apt-get install -y libasound2 2>/dev/null || true
+
+      - name: Install Python dependencies
+        run: pip install -r requirements.txt
+
+      - name: Install Node dependencies
+        run: |
+          if [ -f package-lock.json ]; then npm ci; else npm install; fi
+
+      - name: Install Claude Code
+        run: npm install -g @anthropic-ai/claude-code
+
+      - name: Generate daily insight
+        id: insight
+        env:
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+          ANTHROPIC_BASE_URL: "https://openrouter.ai/api"
+        run: |
+          today="$(TZ=America/Lima date +%Y_%m_%d)"
+          path="insights/insight_${today}.json"
+          mkdir -p insights assets output
+          echo "date=${today}" >> "$GITHUB_OUTPUT"
+          echo "path=${path}" >> "$GITHUB_OUTPUT"
+          if [ "${{ github.event.inputs.usar_ejemplo }}" = "true" ]; then
+            cp examples/insight_example_mtc.json "$path"
+            echo "no_cases=false" >> "$GITHUB_OUTPUT"
+          elif python insights_app/main.py --output "$path"; then
+            echo "no_cases=false" >> "$GITHUB_OUTPUT"
+          else
+            code=$?
+            if [ "$code" = "1" ]; then
+              echo "no_cases=true" >> "$GITHUB_OUTPUT"
+            else
+              exit "$code"
+            fi
+          fi
+
+      - name: Upload insight artifact
+        if: steps.insight.outputs.no_cases != 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: insight-${{ steps.insight.outputs.date }}
+          path: generar-reels/${{ steps.insight.outputs.path }}
+          retention-days: 90
+
+      - name: Generate ElevenLabs voiceover
+        id: audio
+        if: steps.insight.outputs.no_cases != 'true'
+        env:
+          ELEVENLABS_API_KEY: ${{ secrets.ELEVENLABS_API_KEY }}
+          ELEVENLABS_VOICE_ID: ${{ secrets.ELEVENLABS_VOICE_ID }}
+        run: |
+          if [ "${{ github.event.inputs.skip_audio }}" = "true" ]; then
+            ffmpeg -f lavfi -i anullsrc=channel_layout=mono:sample_rate=44100 \
+              -t 20 -c:a libmp3lame -b:a 128k -y assets/voiceover.mp3
+            python3 - "${{ steps.insight.outputs.path }}" <<'PYEOF'
+          import json, sys
+          with open(sys.argv[1], encoding="utf-8") as f:
+              insight = json.load(f)
+          text = insight.get("script", {}).get("voiceover_text_full", "")
+          words = [w.strip(".,;:!?") for w in text.split() if w.strip(".,;:!?")]
+          step = 20.0 / max(len(words), 1)
+          word_ts = [{"word": w, "start": round(i*step,3), "end": round((i+1)*step,3)} for i, w in enumerate(words)]
+          ts = {"audio_duration":20.0,"sentences":[],"scene_times":{"t_intro":0,"t_facts":2,"t_context":5,"t_compare":10,"t_punch":14,"t_cta":17},"words":word_ts}
+          with open("assets/voiceover_timestamps.json","w",encoding="utf-8") as f:
+              json.dump(ts,f)
+          print(f"INFO: {len(word_ts)} fake word timestamps",file=sys.stderr)
+          PYEOF
+            echo "duration=20" >> "$GITHUB_OUTPUT"
+          else
+            raw="$(python scripts/generate_audio.py "${{ steps.insight.outputs.path }}")"
+            echo "$raw"
+            duration="$(echo "$raw" | awk -F= '/AUDIO_DURATION_SECONDS=/{print $2}' | tail -1)"
+            [ -n "$duration" ] || { echo "ERROR: no se pudo parsear AUDIO_DURATION_SECONDS" >&2; exit 1; }
+            echo "duration=${duration}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Patch insight JSON with duration and scene timestamps
+        if: steps.insight.outputs.no_cases != 'true'
+        run: |
+          python3 - "${{ steps.insight.outputs.path }}" "${{ steps.audio.outputs.duration }}" <<'PYEOF'
+          import json, math, sys
+          insight_path, duration_str = sys.argv[1], sys.argv[2]
+          audio_duration = float(duration_str)
+          dur_ceil = math.ceil(audio_duration)
+          with open(insight_path, encoding="utf-8") as f:
+              insight = json.load(f)
+          insight["output"]["duration_seconds"] = dur_ceil
+          try:
+              with open("assets/voiceover_timestamps.json", encoding="utf-8") as f:
+                  ts = json.load(f)
+              st = ts["scene_times"]
+              scene_order = ["t_intro","t_facts","t_context","t_compare","t_punch","t_cta"]
+              labels      = ["intro","facts","context","compare","punch","cta"]
+              times = [st[k] for k in scene_order]
+              segments = []
+              for i, (label, start) in enumerate(zip(labels, times)):
+                  end = times[i+1] if i+1 < len(times) else dur_ceil
+                  segments.append({"start": round(start,2), "end": round(end,2), "label": label})
+              insight["script"]["segments"] = segments
+              insight["script"]["scene_times"] = st
+          except FileNotFoundError:
+              print("WARNING: voiceover_timestamps.json not found, duration only patched")
+          with open(insight_path, "w", encoding="utf-8") as f:
+              json.dump(insight, f, indent=2, ensure_ascii=False)
+          PYEOF
+
+      - name: Build index.html with Claude Code skill
+        id: claude
+        if: steps.insight.outputs.no_cases != 'true'
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+          ANTHROPIC_AUTH_TOKEN: ${{ secrets.OPENROUTER_API_KEY }}
+          ANTHROPIC_BASE_URL: "https://openrouter.ai/api"
+          ANTHROPIC_DEFAULT_HAIKU_MODEL: "anthropic/claude-haiku-4.5"
+          ANTHROPIC_DEFAULT_SONNET_MODEL: "anthropic/claude-sonnet-4.6"
+          ANTHROPIC_DEFAULT_OPUS_MODEL: "anthropic/claude-sonnet-4.6"
+          DISABLE_TELEMETRY: "1"
+        run: |
+          claude -p "/radiografia procesa el insight de hoy con duracion de audio ${{ steps.audio.outputs.duration }} segundos" \
+            --allowedTools "Bash,Read,Write,Edit,Glob" \
+            --output-format json | tee claude_run.json
+          case_title="$(jq -r 'try (.result | fromjson | .case_title) // "Radiografia del Gasto Publico"' claude_run.json 2>/dev/null || echo "Radiografia del Gasto Publico")"
+          entity_name="$(jq -r 'try (.result | fromjson | .entity_name) // "Entidad publica"' claude_run.json 2>/dev/null || echo "Entidad publica")"
+          echo "case_title=${case_title}" >> "$GITHUB_OUTPUT"
+          echo "entity_name=${entity_name}" >> "$GITHUB_OUTPUT"
+
+      - name: Validate prerender assets
+        if: steps.insight.outputs.no_cases != 'true'
+        run: bash scripts/validate_video.sh
+
+      - name: Render MP4 with HyperFrames
+        id: render
+        if: steps.insight.outputs.no_cases != 'true'
+        run: |
+          output="output/radiografia-${{ steps.insight.outputs.date }}.mp4"
+          npx hyperframes render . --output "$output" --workers auto
+          echo "mp4=${output}" >> "$GITHUB_OUTPUT"
+
+      - name: Validate rendered MP4
+        if: steps.insight.outputs.no_cases != 'true'
+        run: bash scripts/validate_video.sh "${{ steps.render.outputs.mp4 }}"
+
+      - name: Upload MP4 artifact
+        if: steps.insight.outputs.no_cases != 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: video-${{ steps.insight.outputs.date }}
+          path: generar-reels/${{ steps.render.outputs.mp4 }}
+          retention-days: 30
+
+      - name: Publish to Instagram
+        if: steps.insight.outputs.no_cases != 'true' && github.event.inputs.modo_test != 'true'
+        env:
+          IG_ACCESS_TOKEN: ${{ secrets.IG_ACCESS_TOKEN }}
+          IG_USER_ID: ${{ secrets.IG_USER_ID }}
+        run: bash scripts/publish_ig.sh "${{ steps.render.outputs.mp4 }}" "${{ steps.insight.outputs.path }}"
+
+      - name: Notify Discord
+        if: always()
+        env:
+          DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
+        run: |
+          [ -n "${DISCORD_WEBHOOK:-}" ] || exit 0
+          run_url="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          no_cases="${{ steps.insight.outputs.no_cases }}"
+          if [ "$no_cases" = "true" ]; then
+            status="Sin casos hoy"; color=16776960; title="Radiografia: sin casos publicables"
+          elif [ "${{ job.status }}" = "success" ]; then
+            status="Exito"; color=4906624; title="${{ steps.claude.outputs.case_title }}"
+          else
+            status="Fallo"; color=15681604; title="Radiografia: workflow fallo"
+          fi
+          payload="$(jq -n \
+            --arg title "$title" --arg status "$status" \
+            --arg run "$run_url" --arg entity "${{ steps.claude.outputs.entity_name }}" \
+            --argjson color "$color" \
+            '{embeds:[{title:$title,color:$color,fields:[
+              {name:"Estado",value:$status,inline:true},
+              {name:"Entidad",value:($entity // "N/A"),inline:true},
+              {name:"Run",value:$run,inline:false}
+            ]}]}')"
+          curl -sS -X POST "$DISCORD_WEBHOOK" -H "Content-Type: application/json" -d "$payload"
